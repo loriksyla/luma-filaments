@@ -93,10 +93,13 @@ const CartItemRow: React.FC<CartItemRowProps> = ({
                         value={localQty}
                         onChange={handleChange}
                         onBlur={handleBlur}
+                        min="1"
+                        max={item.product.stock}
                     />
                     <button 
                         onClick={() => onUpdateQuantity(item.product.id, 1)}
-                        className="px-2 h-full flex items-center text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                        className="px-2 h-full flex items-center text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                        disabled={item.quantity >= item.product.stock}
                     >
                         <Plus size={12} />
                     </button>
