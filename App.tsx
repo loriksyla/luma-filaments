@@ -33,18 +33,22 @@ const AppContent: React.FC = () => {
   }, [isDarkMode]);
 
   const handleAddToCart = (product: Product, quantity: number) => {
-    if (quantity <= 0) return;
+    if (quantity <= 0 || product.stock <= 0) return;
     
     setCartItems(prev => {
       const existingItem = prev.find(item => item.product.id === product.id);
+      const currentQty = existingItem ? existingItem.quantity : 0;
+      const maxAddable = Math.max(0, product.stock - currentQty);
+      const qtyToAdd = Math.min(quantity, maxAddable);
+      if (qtyToAdd <= 0) return prev;
       if (existingItem) {
         return prev.map(item => 
           item.product.id === product.id 
-            ? { ...item, quantity: item.quantity + quantity }
+            ? { ...item, quantity: item.quantity + qtyToAdd }
             : item
         );
       }
-      return [...prev, { product, quantity }];
+      return [...prev, { product, quantity: qtyToAdd }];
     });
     setIsCartOpen(true);
   };
@@ -53,7 +57,8 @@ const AppContent: React.FC = () => {
     setCartItems(prev => prev.map(item => {
       if (item.product.id === productId) {
         const newQuantity = item.quantity + delta;
-        return newQuantity > 0 ? { ...item, quantity: newQuantity } : item;
+        const clampedQuantity = Math.min(newQuantity, item.product.stock);
+        return clampedQuantity > 0 ? { ...item, quantity: clampedQuantity } : item;
       }
       return item;
     }));
@@ -67,7 +72,8 @@ const AppContent: React.FC = () => {
     
     setCartItems(prev => prev.map(item => {
         if (item.product.id === productId) {
-            return { ...item, quantity: quantity };
+            const clampedQuantity = Math.min(quantity, item.product.stock);
+            return { ...item, quantity: clampedQuantity };
         }
         return item;
     }));

@@ -110,6 +110,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
             setError('Shporta është bosh.');
             return;
         }
+        const outOfStock = cartItems.find(
+            (item) => item.product.stock <= 0 || item.quantity > item.product.stock
+        );
+        if (outOfStock) {
+            setError(`Sasia e kërkuar për "${outOfStock.product.name}" tejkalon stokun.`);
+            return;
+        }
 
         setIsSubmitting(true);
 
