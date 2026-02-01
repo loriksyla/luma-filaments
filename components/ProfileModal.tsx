@@ -214,7 +214,36 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        {myOrders.map(order => (
+                                        {myOrders.map(order => {
+                                            const statusStyle =
+                                                order.status === 'Dorëzuar'
+                                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                                                    : order.status === 'Në dërgim'
+                                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                                                    : order.status === 'Në proces'
+                                                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                                                    : order.status === 'Anuluar'
+                                                    ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
+                                                    : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
+                                            const progressMap: Record<string, number> = {
+                                                'Krijuar': 25,
+                                                'Në proces': 50,
+                                                'Në dërgim': 75,
+                                                'Dorëzuar': 100,
+                                                'Anuluar': 100,
+                                            };
+                                            const progressValue = progressMap[order.status] ?? 0;
+                                            const progressColor =
+                                                order.status === 'Dorëzuar'
+                                                    ? 'bg-emerald-500'
+                                                    : order.status === 'Në dërgim'
+                                                    ? 'bg-blue-500'
+                                                    : order.status === 'Në proces'
+                                                    ? 'bg-amber-500'
+                                                    : order.status === 'Anuluar'
+                                                    ? 'bg-rose-500'
+                                                    : 'bg-slate-400';
+                                            return (
                                             <div key={order.id} className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50">
                                                 <div className="flex justify-between items-start">
                                                     <div>
@@ -225,16 +254,30 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                                             {new Date(order.date).toLocaleDateString()}
                                                         </p>
                                                     </div>
-                                                    <span className="text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                                                    <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-full ${statusStyle}`}>
                                                         {order.status}
                                                     </span>
+                                                </div>
+                                                <div className="mt-4">
+                                                    <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                                                        <div
+                                                            className={`h-full ${progressColor} transition-all`}
+                                                            style={{ width: `${progressValue}%` }}
+                                                        />
+                                                    </div>
+                                                    <div className="mt-2 flex justify-between text-[10px] uppercase tracking-wider text-slate-400">
+                                                        <span>Krijuar</span>
+                                                        <span>Në proces</span>
+                                                        <span>Në dërgim</span>
+                                                        <span>Dorëzuar</span>
+                                                    </div>
                                                 </div>
                                                 <div className="mt-3 flex justify-between items-center text-sm">
                                                     <span className="text-slate-500 dark:text-slate-400">Totali</span>
                                                     <span className="font-bold text-slate-900 dark:text-white">€{order.total.toFixed(2)}</span>
                                                 </div>
                                             </div>
-                                        ))}
+                                        )})}
                                     </div>
                                 )}
                             </div>
