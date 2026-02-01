@@ -24,7 +24,7 @@ const DEFAULT_COLORS = [
 ];
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
-    const { orders, products, updateOrderStatus, addProduct, updateProduct, deleteProduct, refreshOrders, refreshProducts } = useAuth();
+    const { user, orders, products, updateOrderStatus, addProduct, updateProduct, deleteProduct, refreshOrders, refreshProducts } = useAuth();
     const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'products'>('dashboard');
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -45,13 +45,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
     const [isAddingProduct, setIsAddingProduct] = useState(false);
 
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && user?.role === 'admin') {
             refreshOrders();
             refreshProducts();
         }
-    }, [isOpen, refreshOrders, refreshProducts]);
+    }, [isOpen, user, refreshOrders, refreshProducts]);
 
-    if (!isOpen) return null;
+    if (!isOpen || !user || user.role !== 'admin') return null;
 
     // --- Dashboard Stats ---
     const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
