@@ -39,7 +39,18 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const client = generateClient<Schema>();
 
-const toJsonValue = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
+const toJsonValue = <T,>(value: T): string => JSON.stringify(value ?? null);
+const fromJsonValue = <T,>(value: unknown, fallback: T): T => {
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return fallback;
+    }
+  }
+  if (value == null) return fallback;
+  return value as T;
+};
 
 const statusToBackend = (status: OrderStatus) => {
   switch (status) {
@@ -195,8 +206,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       total: item.total ?? 0,
       date: item.date ?? '',
       status: statusFromBackend(item.status),
-      items: (item.items as CartItem[]) ?? [],
-      address: (item.address as Address) ?? '',
+      items: fromJsonValue<CartItem[]>(item.items, []),
+      address: fromJsonValue<Address | string>(item.address, ''),
     }));
     setOrders(mapped);
   };
