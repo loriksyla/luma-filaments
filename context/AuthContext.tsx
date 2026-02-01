@@ -258,7 +258,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const record = data[0];
       setUserProfileId(record.id);
       const addresses = fromJsonValue<Address[]>(record.addresses, []);
-      const role = (record.role as Role) ?? profile.role;
+      const role = profile.role === 'admin' ? 'admin' : ((record.role as Role) ?? profile.role);
+      if (record.role !== role) {
+        await client.models.UserProfile.update({
+          id: record.id,
+          name: profile.name,
+          email: profile.email,
+          role,
+          addresses: toJsonValue(addresses),
+        }, { authMode: 'userPool' });
+      }
       return {
         ...profile,
         role,
