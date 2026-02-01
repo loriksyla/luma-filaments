@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, MapPin, Plus, Trash2, Check, Star, Pencil } from 'lucide-react';
+import { X, User, MapPin, Plus, Trash2, Check, Star, Pencil, Package } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Address } from '../types';
 
@@ -29,7 +29,7 @@ const COUNTRIES = {
 };
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
-    const { user, logout, addAddress, editAddress, setDefaultAddress, deleteAddress } = useAuth();
+    const { user, orders, logout, addAddress, editAddress, setDefaultAddress, deleteAddress } = useAuth();
     const [view, setView] = useState<'details' | 'form'>('details');
     const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -47,6 +47,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
     });
 
     if (!isOpen || !user) return null;
+    const myOrders = orders.filter(o => o.customerEmail === user.email || o.userId === user.email);
 
     const resetForm = () => {
         setFormData({
@@ -201,6 +202,40 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                             </div>
                                         </div>
                                     ))
+                                )}
+                            </div>
+
+                            <div className="mt-10">
+                                <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Porositë e mia</h4>
+                                {myOrders.length === 0 ? (
+                                    <div className="p-8 text-center bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
+                                        <Package className="mx-auto text-slate-400 mb-2" size={32} />
+                                        <p className="text-slate-500 dark:text-slate-400">Nuk keni ende asnjë porosi.</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {myOrders.map(order => (
+                                            <div key={order.id} className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50">
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <p className="font-bold text-slate-900 dark:text-white">
+                                                            {order.id}
+                                                        </p>
+                                                        <p className="text-slate-500 dark:text-slate-400 text-sm">
+                                                            {new Date(order.date).toLocaleDateString()}
+                                                        </p>
+                                                    </div>
+                                                    <span className="text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                                                        {order.status}
+                                                    </span>
+                                                </div>
+                                                <div className="mt-3 flex justify-between items-center text-sm">
+                                                    <span className="text-slate-500 dark:text-slate-400">Totali</span>
+                                                    <span className="font-bold text-slate-900 dark:text-white">€{order.total.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 )}
                             </div>
                         </>

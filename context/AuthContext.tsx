@@ -88,6 +88,7 @@ const statusFromBackend = (status: string | null | undefined): OrderStatus => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [userProfileId, setUserProfileId] = useState<string | null>(null);
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
 
@@ -133,9 +134,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       if (result.isSignedIn) {
         const profile = await buildUserFromSession();
-        setUser(profile);
         if (profile) {
-          await Promise.all([loadProducts('userPool'), profile.role === 'admin' ? loadOrders() : Promise.resolve()]);
+          const synced = await syncUserProfile(profile);
+          setUser(synced);
+          await Promise.all([loadProducts('userPool'), loadOrders()]);
         }
         return { ok: true };
       }
@@ -150,9 +152,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const result = await confirmSignIn({ challengeResponse: newPassword });
       if (result.isSignedIn) {
         const profile = await buildUserFromSession();
-        setUser(profile);
         if (profile) {
-          await Promise.all([loadProducts('userPool'), profile.role === 'admin' ? loadOrders() : Promise.resolve()]);
+          const synced = await syncUserProfile(profile);
+          setUser(synced);
+          await Promise.all([loadProducts('userPool'), loadOrders()]);
         }
         return { ok: true };
       }
@@ -165,6 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     await signOut();
     setUser(null);
+    setUserProfileId(null);
     setOrders(INITIAL_ORDERS);
     await loadProducts('identityPool');
   };
@@ -214,15 +218,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setOrders(mapped);
   };
 
+  const syncUserProfile = async (profile: User): Promise<User> => {
+    const { data } = await client.models.UserProfile.list({ authMode: 'userPool' });
+    if (data && data.length > 0) {
+      const record = data[0];
+      setUserProfileId(record.id);
+      const addresses = fromJsonValue<Address[]>(record.addresses, []);
+      const role = (record.role as Role) ?? profile.role;
+      return {
+        ...profile,
+        role,
+        addresses,
+      };
+    }
+
+    const { data: created } = await client.models.UserProfile.create({
+      name: profile.name,
+      email: profile.email,
+      role: profile.role,
+      addresses: toJsonValue(profile.addresses),
+    }, { authMode: 'userPool' });
+
+    if (created) {
+      setUserProfileId(created.id);
+    }
+
+    return profile;
+  };
+
+  const persistAddresses = async (addresses: Address[]) => {
+    if (!user) return;
+    if (userProfileId) {
+      await client.models.UserProfile.update({
+        id: userProfileId,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        addresses: toJsonValue(addresses),
+      }, { authMode: 'userPool' });
+      return;
+    }
+
+    const { data } = await client.models.UserProfile.create({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      addresses: toJsonValue(addresses),
+    }, { authMode: 'userPool' });
+    if (data) {
+      setUserProfileId(data.id);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
     const init = async () => {
       const profile = await buildUserFromSession();
       if (mounted) {
-        setUser(profile);
         if (profile) {
-          await Promise.all([loadProducts('userPool'), profile.role === 'admin' ? loadOrders() : Promise.resolve()]);
+          const synced = await syncUserProfile(profile);
+          setUser(synced);
+          await Promise.all([loadProducts('userPool'), loadOrders()]);
         } else {
+          setUser(null);
           await loadProducts('identityPool');
         }
       }
@@ -242,18 +300,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isDefault: user.addresses.length === 0 // First address is default
     };
 
+    const updated = [...user.addresses, newAddress];
     setUser({
         ...user,
-        addresses: [...user.addresses, newAddress]
+        addresses: updated
     });
+    persistAddresses(updated);
   };
 
   const editAddress = (updatedAddr: Address) => {
     if (!user) return;
+    const updated = user.addresses.map(a => a.id === updatedAddr.id ? updatedAddr : a);
     setUser({
         ...user,
-        addresses: user.addresses.map(a => a.id === updatedAddr.id ? updatedAddr : a)
+        addresses: updated
     });
+    persistAddresses(updated);
   };
 
   const setDefaultAddress = (id: string) => {
@@ -263,14 +325,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isDefault: addr.id === id
     }));
     setUser({ ...user, addresses: updatedAddresses });
+    persistAddresses(updatedAddresses);
   };
 
   const deleteAddress = (id: string) => {
     if (!user) return;
+    const updated = user.addresses.filter(a => a.id !== id);
     setUser({
         ...user,
-        addresses: user.addresses.filter(a => a.id !== id)
+        addresses: updated
     });
+    persistAddresses(updated);
   };
 
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
