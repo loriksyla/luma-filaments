@@ -39,6 +39,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const client = generateClient<Schema>();
 
+const toJsonValue = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
+
 const statusToBackend = (status: OrderStatus) => {
   switch (status) {
     case 'Krijuar':
@@ -315,8 +317,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       total: order.total,
       date: order.date,
       status: statusToBackend(order.status),
-      items: order.items,
-      address: order.address,
+      items: toJsonValue(order.items),
+      address: toJsonValue(order.address),
     });
     if (errors && errors.length > 0) {
       throw new Error(errors[0]?.message || 'Porosia nuk u krijua.');
