@@ -16,6 +16,7 @@ const schema = a.schema({
       stock: a.integer(),
     })
     .authorization((allow) => [
+      allow.guest().to(['read']),
       allow.authenticated().to(['read']),
       allow.groups(['ADMINS']),
     ]),
@@ -30,7 +31,11 @@ const schema = a.schema({
       items: a.json(),
       address: a.json(),
     })
-    .authorization((allow) => [allow.owner(), allow.groups(['ADMINS'])]),
+    .authorization((allow) => [
+      allow.guest().to(['create']),
+      allow.owner(),
+      allow.groups(['ADMINS']),
+    ]),
   UserProfile: a
     .model({
       name: a.string(),

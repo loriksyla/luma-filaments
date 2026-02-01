@@ -135,7 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const profile = await buildUserFromSession();
         setUser(profile);
         if (profile) {
-          await Promise.all([loadProducts(), loadOrders()]);
+          await Promise.all([loadProducts('userPool'), profile.role === 'admin' ? loadOrders() : Promise.resolve()]);
         }
         return { ok: true };
       }
@@ -152,7 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const profile = await buildUserFromSession();
         setUser(profile);
         if (profile) {
-          await Promise.all([loadProducts(), loadOrders()]);
+          await Promise.all([loadProducts('userPool'), profile.role === 'admin' ? loadOrders() : Promise.resolve()]);
         }
         return { ok: true };
       }
@@ -165,12 +165,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     await signOut();
     setUser(null);
-    setProducts(INITIAL_PRODUCTS);
     setOrders(INITIAL_ORDERS);
+    await loadProducts('identityPool');
   };
 
-  const loadProducts = async () => {
-    const { data } = await client.models.Product.list();
+  const loadProducts = async (authMode?: 'identityPool' | 'userPool') => {
+    const { data } = await client.models.Product.list(
+      authMode ? { authMode } : undefined
+    );
     if (!data) {
       setProducts([]);
       return;
@@ -193,7 +195,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loadOrders = async () => {
-    const { data } = await client.models.Order.list();
+    const { data } = await client.models.Order.list({ authMode: 'userPool' });
     if (!data) {
       setOrders([]);
       return;
@@ -219,7 +221,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (mounted) {
         setUser(profile);
         if (profile) {
-          await Promise.all([loadProducts(), loadOrders()]);
+          await Promise.all([loadProducts('userPool'), profile.role === 'admin' ? loadOrders() : Promise.resolve()]);
+        } else {
+          await loadProducts('identityPool');
         }
       }
     };
@@ -273,7 +277,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await client.models.Order.update({
       id: orderId,
       status: statusToBackend(status),
-    });
+    }, { authMode: 'userPool' });
     await loadOrders();
   };
 
@@ -290,11 +294,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       available: product.available,
       brand: product.brand,
       stock: product.stock,
-    });
+    }, { authMode: 'userPool' });
     if (!data) {
       throw new Error('Nuk u krijua produkti.');
     }
-    await loadProducts();
+    await loadProducts('userPool');
   };
 
   const updateProduct = async (updatedProduct: Product) => {
@@ -311,13 +315,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       available: updatedProduct.available,
       brand: updatedProduct.brand,
       stock: updatedProduct.stock,
-    });
-    await loadProducts();
+    }, { authMode: 'userPool' });
+    await loadProducts('userPool');
   };
 
   const deleteProduct = async (id: string) => {
-    await client.models.Product.delete({ id });
-    await loadProducts();
+    await client.models.Product.delete({ id }, { authMode: 'userPool' });
+    await loadProducts('userPool');
   };
 
   const addOrder = async (order: Order) => {
@@ -330,14 +334,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       status: statusToBackend(order.status),
       items: toJsonValue(order.items),
       address: toJsonValue(order.address),
-    });
+    }, { authMode: user ? 'userPool' : 'identityPool' });
     if (errors && errors.length > 0) {
       throw new Error(errors[0]?.message || 'Porosia nuk u krijua.');
     }
     if (!data) {
       throw new Error('Porosia nuk u krijua.');
     }
-    await loadOrders();
+    if (user?.role === 'admin') {
+      await loadOrders();
+    }
   };
 
   return (
@@ -345,7 +351,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user, 
         products, 
         orders, 
-        refreshProducts: loadProducts,
+        refreshProducts: () => loadProducts(user ? 'userPool' : 'identityPool'),
         refreshOrders: loadOrders,
         login, 
         completeNewPassword,

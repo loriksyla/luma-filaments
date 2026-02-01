@@ -106,11 +106,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
         e.preventDefault();
         setError('');
 
-        if (!user) {
-            setError('Duhet të kyçeni për të bërë porosi.');
-            return;
-        }
-
         if (cartItems.length === 0) {
             setError('Shporta është bosh.');
             return;
@@ -139,11 +134,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
 
         const addressToSave = selectedAddress ?? manualAddress;
 
+        const customerName =
+            mode === 'form'
+                ? `${formData.firstName} ${formData.lastName}`.trim()
+                : user?.name ?? `${formData.firstName} ${formData.lastName}`.trim();
+        const customerEmail = mode === 'form' ? formData.email : user?.email ?? formData.email;
+
         const order: Order = {
             id: `ORD-${Date.now()}`,
-            userId: user.email,
-            customerName: user.name,
-            customerEmail: user.email,
+            userId: user?.email ?? 'guest',
+            customerName,
+            customerEmail,
             total,
             date: new Date().toISOString(),
             status: 'Krijuar',
