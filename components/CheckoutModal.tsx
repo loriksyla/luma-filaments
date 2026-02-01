@@ -200,7 +200,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[110] flex items-center justify-center p-4 overflow-y-auto">
-             <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl animate-fade-in border border-slate-200 dark:border-slate-800 my-8">
+             <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl animate-fade-in border border-slate-200 dark:border-slate-800 my-8 max-h-[85vh] overflow-y-auto">
                 {/* Header */}
                 <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 rounded-t-2xl">
                     <h2 className="text-xl font-black text-slate-900 dark:text-white">Detajet e Porosisë</h2>

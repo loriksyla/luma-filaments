@@ -47,7 +47,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
     });
 
     if (!isOpen || !user) return null;
-    const myOrders = orders.filter(o => o.customerEmail === user.email || o.userId === user.email);
+    const myOrders = orders
+        .filter(o => o.customerEmail === user.email || o.userId === user.email)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     const resetForm = () => {
         setFormData({
