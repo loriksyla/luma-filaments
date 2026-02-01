@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { X, Check, MapPin, Phone, Mail, User, PlusCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { Address, CartItem, Order } from '../types';
 
 interface CheckoutModalProps {
     isOpen: boolean;
     onClose: () => void;
     onClearCart: () => void;
     total: number;
+    cartItems: CartItem[];
 }
 
 const COUNTRIES = {
@@ -29,8 +31,8 @@ const COUNTRIES = {
     ]
 };
 
-export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onClearCart, total }) => {
-    const { user } = useAuth();
+export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onClearCart, total, cartItems }) => {
+    const { user, addOrder } = useAuth();
     
     // Mode can be 'form' (manual entry) or 'selection' (choose from saved)
     const [mode, setMode] = useState<'form' | 'selection'>('form');
@@ -50,6 +52,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [error, setError] = useState('');
 
     // Initialize state when modal opens
     useEffect(() => {
@@ -99,18 +102,63 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsSubmitting(true);
-        
-        // In a real app, if mode is 'selection', we would grab the address details using selectedAddressId
-        // and send that ID or the address data to the backend.
-        // For this demo, we just simulate the API call.
+        setError('');
 
-        setTimeout(() => {
-            setIsSubmitting(false);
+        if (!user) {
+            setError('Duhet të kyçeni për të bërë porosi.');
+            return;
+        }
+
+        if (cartItems.length === 0) {
+            setError('Shporta është bosh.');
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        const selectedAddress =
+            mode === 'selection'
+                ? user.addresses.find((addr) => addr.id === selectedAddressId) ?? null
+                : null;
+
+        const manualAddress: Address = {
+            id: `addr-${Date.now()}`,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            country: formData.country,
+            city: formData.city,
+            customCity: formData.customCity || undefined,
+            address: formData.address,
+            postalCode: formData.postalCode,
+            phone: formData.phone,
+            isDefault: false,
+        };
+
+        const addressToSave = selectedAddress ?? manualAddress;
+
+        const order: Order = {
+            id: `ORD-${Date.now()}`,
+            userId: user.email,
+            customerName: user.name,
+            customerEmail: user.email,
+            total,
+            date: new Date().toISOString(),
+            status: 'Krijuar',
+            items: cartItems,
+            address: addressToSave,
+        };
+
+        try {
+            await addOrder(order);
             setIsSuccess(true);
-        }, 1500);
+        } catch (err: any) {
+            setError(err?.message || 'Porosia nuk u krye. Provoni përsëri.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleClose = () => {
@@ -118,6 +166,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
             onClearCart();
         }
         setIsSuccess(false);
+        setError('');
         setIsSubmitting(false);
         onClose();
     };
@@ -206,6 +255,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
                             </button>
 
                             <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-4">
+                                {error && (
+                                    <div className="mb-4 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900 rounded-lg p-3">
+                                        {error}
+                                    </div>
+                                )}
                                 <div className="flex justify-between items-center mb-6">
                                     <span className="text-slate-500 font-medium">Totali për pagesë</span>
                                     <span className="text-2xl font-black text-slate-900 dark:text-white">€{total.toFixed(2)}</span>
@@ -393,6 +447,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
                             </div>
 
                             <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-4">
+                                {error && (
+                                    <div className="mb-4 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900 rounded-lg p-3">
+                                        {error}
+                                    </div>
+                                )}
                                 <div className="flex justify-between items-center mb-6">
                                     <span className="text-slate-500 font-medium">Totali për pagesë</span>
                                     <span className="text-2xl font-black text-slate-900 dark:text-white">€{total.toFixed(2)}</span>

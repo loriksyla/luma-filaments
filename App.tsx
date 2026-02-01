@@ -128,6 +128,7 @@ const AppContent: React.FC = () => {
         onClose={() => setIsCheckoutOpen(false)}
         onClearCart={handleClearCart}
         total={cartTotal}
+        cartItems={cartItems}
       />
 
       <LoginModal 

@@ -12,134 +12,8 @@ import type { Schema } from '../amplify/data/resource';
 import { User, Address, Order, Product, FilamentType, OrderStatus, Role, CartItem } from '../types';
 
 // Mock Initial Data
-const INITIAL_PRODUCTS: Product[] = [
-  {
-    id: '1',
-    name: 'Arctic White',
-    type: FilamentType.PLA,
-    color: 'White',
-    hex: '#F8FAFC',
-    price: 24.99,
-    weight: '1kg',
-    description: 'Pure, stark white with high opacity.',
-    imageUrl: '',
-    available: true,
-    brand: 'LUMA',
-    stock: 50
-  },
-  {
-    id: '2',
-    name: 'Void Black',
-    type: FilamentType.PLA,
-    color: 'Black',
-    hex: '#0F172A',
-    price: 24.99,
-    weight: '1kg',
-    description: 'Deep, matte black finish.',
-    imageUrl: '',
-    available: true,
-    brand: 'LUMA',
-    stock: 42
-  },
-  {
-    id: '3',
-    name: 'Cyber Teal',
-    type: FilamentType.PETG,
-    color: 'Teal',
-    hex: '#2DD4BF',
-    price: 28.99,
-    weight: '1kg',
-    description: 'High strength PETG with a vibrant neon teal hue.',
-    imageUrl: '',
-    available: true,
-    brand: 'LUMA',
-    stock: 15
-  },
-  {
-    id: '4',
-    name: 'Inferno Red',
-    type: FilamentType.PLA,
-    color: 'Red',
-    hex: '#EF4444',
-    price: 24.99,
-    weight: '1kg',
-    description: 'Aggressive, bright red.',
-    imageUrl: '',
-    available: true,
-    brand: 'LUMA',
-    stock: 8
-  },
-  {
-    id: '5',
-    name: 'Mech Grey',
-    type: FilamentType.ABS,
-    color: 'Grey',
-    hex: '#64748B',
-    price: 29.99,
-    weight: '1kg',
-    description: 'Industrial grade ABS.',
-    imageUrl: '',
-    available: true,
-    brand: 'LUMA',
-    stock: 100
-  },
-  {
-    id: '6',
-    name: 'Volt Yellow',
-    type: FilamentType.TPU,
-    color: 'Yellow',
-    hex: '#FACC15',
-    price: 34.99,
-    weight: '1kg',
-    description: '95A Shore hardness flexible filament.',
-    imageUrl: '',
-    available: true,
-    brand: 'LUMA',
-    stock: 5
-  },
-];
-
-const INITIAL_ORDERS: Order[] = [
-    {
-        id: 'ORD-001',
-        userId: 'guest',
-        customerName: 'Agim Gashi',
-        customerEmail: 'agim@example.com',
-        total: 49.98,
-        date: new Date(new Date().setDate(new Date().getDate() - 2)).toISOString(), // 2 days ago
-        status: 'Dorëzuar',
-        items: [
-            { product: INITIAL_PRODUCTS[0], quantity: 2 }
-        ],
-        address: 'Rruga B, Prishtinë'
-    },
-    {
-        id: 'ORD-002',
-        userId: 'guest',
-        customerName: 'Teuta Krasniqi',
-        customerEmail: 'teuta@example.com',
-        total: 28.99,
-        date: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(), // 1 day ago
-        status: 'Në dërgim',
-        items: [
-            { product: INITIAL_PRODUCTS[2], quantity: 1 }
-        ],
-        address: 'Qendra, Prizren'
-    },
-     {
-        id: 'ORD-003',
-        userId: 'guest',
-        customerName: 'Blerim Shala',
-        customerEmail: 'blerim@example.com',
-        total: 74.97,
-        date: new Date().toISOString(), // Today
-        status: 'Krijuar',
-        items: [
-            { product: INITIAL_PRODUCTS[1], quantity: 3 }
-        ],
-        address: 'Dardania, Prishtinë'
-    }
-];
+const INITIAL_PRODUCTS: Product[] = [];
+const INITIAL_ORDERS: Order[] = [];
 
 interface AuthContextType {
   user: User | null;
@@ -245,6 +119,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (result.isSignedIn) {
         const profile = await buildUserFromSession();
         setUser(profile);
+        if (profile) {
+          await Promise.all([loadProducts(), loadOrders()]);
+        }
         return { ok: true };
       }
       return { ok: false, message: 'Hyrja kërkon hapa shtesë. Ju lutem provoni përsëri.' };
@@ -259,6 +136,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (result.isSignedIn) {
         const profile = await buildUserFromSession();
         setUser(profile);
+        if (profile) {
+          await Promise.all([loadProducts(), loadOrders()]);
+        }
         return { ok: true };
       }
       return { ok: false, message: 'Nuk u konfirmua fjalëkalimi i ri.' };
