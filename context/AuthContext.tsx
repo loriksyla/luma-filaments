@@ -19,6 +19,8 @@ interface AuthContextType {
   user: User | null;
   products: Product[];
   orders: Order[];
+  refreshProducts: () => Promise<void>;
+  refreshOrders: () => Promise<void>;
   login: (email: string, pass: string) => Promise<{ ok: boolean; newPasswordRequired?: boolean; message?: string }>;
   completeNewPassword: (newPassword: string) => Promise<{ ok: boolean; message?: string }>;
   logout: () => Promise<void>;
@@ -259,7 +261,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: orderId,
       status: statusToBackend(status),
     });
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+    await loadOrders();
   };
 
   const addProduct = async (product: Product) => {
@@ -276,12 +278,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       brand: product.brand,
       stock: product.stock,
     });
-    if (data) {
-      setProducts(prev => [
-        ...prev,
-        { ...product, id: data.id },
-      ]);
+    if (!data) {
+      throw new Error('Nuk u krijua produkti.');
     }
+    await loadProducts();
   };
 
   const updateProduct = async (updatedProduct: Product) => {
@@ -299,12 +299,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       brand: updatedProduct.brand,
       stock: updatedProduct.stock,
     });
-    setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+    await loadProducts();
   };
 
   const deleteProduct = async (id: string) => {
     await client.models.Product.delete({ id });
-    setProducts(prev => prev.filter(p => p.id !== id));
+    await loadProducts();
   };
 
   const addOrder = async (order: Order) => {
@@ -318,15 +318,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       items: order.items,
       address: order.address,
     });
-    if (data) {
-      setOrders(prev => [
-        {
-          ...order,
-          id: data.id,
-        },
-        ...prev,
-      ]);
+    if (!data) {
+      throw new Error('Porosia nuk u krijua.');
     }
+    await loadOrders();
   };
 
   return (
@@ -334,6 +329,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user, 
         products, 
         orders, 
+        refreshProducts: loadProducts,
+        refreshOrders: loadOrders,
         login, 
         completeNewPassword,
         logout, 

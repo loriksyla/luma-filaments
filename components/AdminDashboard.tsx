@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Package, LayoutDashboard, ShoppingBag, Plus, Search, ChevronDown, Check, TrendingUp, Trash2, Pencil } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { OrderStatus, FilamentType, Product } from '../types';
@@ -24,7 +24,7 @@ const DEFAULT_COLORS = [
 ];
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
-    const { orders, products, updateOrderStatus, addProduct, updateProduct, deleteProduct } = useAuth();
+    const { orders, products, updateOrderStatus, addProduct, updateProduct, deleteProduct, refreshOrders, refreshProducts } = useAuth();
     const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'products'>('dashboard');
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -43,6 +43,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
         brand: 'LUMA'
     });
     const [isAddingProduct, setIsAddingProduct] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            refreshOrders();
+            refreshProducts();
+        }
+    }, [isOpen, refreshOrders, refreshProducts]);
 
     if (!isOpen) return null;
 
