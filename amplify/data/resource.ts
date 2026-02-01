@@ -67,8 +67,8 @@ const schema = a
       total: a.float().required(),
       date: a.string().required(),
       status: a.string().required(),
-      items: a.json().required(),
-      address: a.json().required(),
+      items: a.string().required(),
+      address: a.string().required(),
     })
     .authorization((allow) => [allow.guest(), allow.authenticated()])
     .handler(a.handler.function(placeOrderHandler))
