@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Package, LayoutDashboard, ShoppingBag, Plus, Search, ChevronDown, Check, TrendingUp, Trash2, Pencil } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { OrderStatus, FilamentType, Product } from '../types';
+import { OrderStatus, FilamentType, Product, Address } from '../types';
 
 interface AdminDashboardProps {
     isOpen: boolean;
@@ -52,6 +52,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
     }, [isOpen, user, refreshOrders, refreshProducts]);
 
     if (!isOpen || !user || user.role !== 'admin') return null;
+
+    const formatOrderId = (id: string) => {
+        if (!id) return '—';
+        const normalized = id.replace(/^ORD-/, '');
+        return `#${normalized.slice(-6).toUpperCase()}`;
+    };
+
+    const formatAddress = (value: Address | string | null | undefined) => {
+        if (!value) return '—';
+        if (typeof value === 'string') return value;
+        const name = [value.firstName, value.lastName].filter(Boolean).join(' ');
+        const line1 = value.address || '';
+        const city = value.city === 'Tjetër' ? value.customCity : value.city;
+        const line2 = [city, value.country, value.postalCode].filter(Boolean).join(', ');
+        const phone = value.phone ? `Tel: ${value.phone}` : '';
+        return [name, line1, line2, phone].filter(Boolean).join(' • ');
+    };
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const monthlyRevenue = Array.from({ length: 12 }, (_, idx) => {
+        const total = orders.reduce((sum, order) => {
+            const date = new Date(order.date);
+            if (Number.isNaN(date.getTime())) return sum;
+            if (date.getFullYear() !== currentYear || date.getMonth() !== idx) return sum;
+            return sum + order.total;
+        }, 0);
+        return Math.round(total);
+    });
 
     // --- Dashboard Stats ---
     const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
@@ -249,18 +278,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Monthly Revenue</h3>
                             <div className="h-64 flex items-end justify-between gap-2 md:gap-4 px-2">
-                                {[35, 45, 30, 60, 55, 75, 50, 65, 80, 70, 90, 85].map((h, i) => (
-                                    <div key={i} className="w-full bg-rose-100 dark:bg-rose-900/20 rounded-t-lg relative group">
-                                        <div 
-                                            className="absolute bottom-0 w-full bg-rose-500 rounded-t-lg transition-all duration-1000 group-hover:bg-rose-600"
-                                            style={{ height: `${h}%` }}
-                                        ></div>
-                                        {/* Tooltip */}
-                                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                            €{(h * 150).toFixed(0)}
+                                {monthlyRevenue.map((value, i) => {
+                                    const max = Math.max(...monthlyRevenue, 1);
+                                    const h = Math.round((value / max) * 100);
+                                    return (
+                                        <div key={i} className="w-full bg-rose-100 dark:bg-rose-900/20 rounded-t-lg relative group">
+                                            <div 
+                                                className="absolute bottom-0 w-full bg-rose-500 rounded-t-lg transition-all duration-1000 group-hover:bg-rose-600"
+                                                style={{ height: `${h}%` }}
+                                            ></div>
+                                            {/* Tooltip */}
+                                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                                €{value.toFixed(0)}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                             <div className="flex justify-between mt-4 text-xs font-bold text-slate-400 uppercase tracking-widest">
                                 <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span>
@@ -282,19 +315,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                         <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Total</th>
                                         <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Status</th>
                                         <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Items</th>
+                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Address</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                     {filteredOrders.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="p-8 text-center text-slate-500">
+                                            <td colSpan={7} className="p-8 text-center text-slate-500">
                                                 No orders found.
                                             </td>
                                         </tr>
                                     ) : (
                                         filteredOrders.map(order => (
                                             <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                                                <td className="p-4 font-mono text-xs text-slate-500 dark:text-slate-400">#{order.id}</td>
+                                                <td className="p-4 font-mono text-xs text-slate-500 dark:text-slate-400">{formatOrderId(order.id)}</td>
                                                 <td className="p-4">
                                                     <div className="font-bold text-slate-900 dark:text-white">{order.customerName}</div>
                                                     <div className="text-xs text-slate-500">{order.customerEmail}</div>
@@ -324,6 +358,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                                 </td>
                                                 <td className="p-4 text-xs text-slate-500">
                                                     {order.items.length} items
+                                                </td>
+                                                <td className="p-4 text-xs text-slate-500 max-w-[260px]">
+                                                    <div className="line-clamp-3">{formatAddress(order.address)}</div>
                                                 </td>
                                             </tr>
                                         ))

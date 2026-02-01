@@ -107,8 +107,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[120] flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl animate-fade-in border border-slate-200 dark:border-slate-800 my-8">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[120] flex items-start justify-center p-4 overflow-y-auto">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl animate-fade-in border border-slate-200 dark:border-slate-800 my-8 max-h-[90vh] overflow-hidden">
                 <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 rounded-t-2xl">
                     <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
                         <User size={20} />
@@ -119,7 +119,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                     </button>
                 </div>
 
-                <div className="p-6">
+                <div className="p-6 overflow-y-auto max-h-[calc(90vh-84px)]">
                     {view === 'details' ? (
                         <>
                             <div className="flex items-center gap-4 mb-8">
