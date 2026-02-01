@@ -166,7 +166,14 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
             }
             setIsSuccess(true);
         } catch (err: any) {
-            setError(err?.message || 'Porosia nuk u krye. Provoni përsëri.');
+            const rawMessage = err?.message ?? err;
+            const message =
+                typeof rawMessage === 'string'
+                    ? rawMessage
+                    : rawMessage
+                        ? JSON.stringify(rawMessage)
+                        : 'Porosia nuk u krye. Provoni përsëri.';
+            setError(message);
         } finally {
             setIsSubmitting(false);
         }

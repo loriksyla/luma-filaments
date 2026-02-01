@@ -455,10 +455,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, { authMode: user ? 'userPool' : 'identityPool' });
 
     if (errors && errors.length > 0) {
-      throw new Error(errors[0]?.message || 'Porosia nuk u krijua.');
+      const rawMessage = errors[0]?.message;
+      const message =
+        typeof rawMessage === 'string'
+          ? rawMessage
+          : rawMessage
+            ? JSON.stringify(rawMessage)
+            : 'Porosia nuk u krijua.';
+      throw new Error(message);
     }
     if (!data?.ok) {
-      throw new Error(data?.message || 'Porosia nuk u krijua.');
+      const rawMessage = data?.message;
+      const message =
+        typeof rawMessage === 'string'
+          ? rawMessage
+          : rawMessage
+            ? JSON.stringify(rawMessage)
+            : 'Porosia nuk u krijua.';
+      throw new Error(message);
     }
 
     await loadProducts(user ? 'userPool' : 'identityPool');
