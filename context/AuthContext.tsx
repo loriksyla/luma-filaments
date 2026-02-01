@@ -43,7 +43,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const client = generateClient<Schema>();
 
-const toJsonValue = <T,>(value: T): string => JSON.stringify(value ?? null);
+const toJsonValue = <T,>(value: T): T | null => (value ?? null);
 const fromJsonValue = <T,>(value: unknown, fallback: T): T => {
   if (typeof value === 'string') {
     try {
