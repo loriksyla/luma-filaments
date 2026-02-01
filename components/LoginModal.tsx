@@ -8,24 +8,49 @@ interface LoginModalProps {
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
-    const { login } = useAuth();
+    const { login, completeNewPassword } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [isNewPasswordRequired, setIsNewPasswordRequired] = useState(false);
     const [error, setError] = useState('');
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        const success = login(email, password);
-        if (success) {
+        if (isNewPasswordRequired) {
+            if (!newPassword) {
+                setError('Ju lutem vendosni fjalëkalimin e ri.');
+                return;
+            }
+            const result = await completeNewPassword(newPassword);
+            if (result.ok) {
+                onClose();
+                setEmail('');
+                setPassword('');
+                setNewPassword('');
+                setIsNewPasswordRequired(false);
+            } else {
+                setError(result.message || 'Konfirmimi i fjalëkalimit të ri dështoi.');
+            }
+            return;
+        }
+
+        const result = await login(email, password);
+        if (result.ok) {
             onClose();
             // Reset form
             setEmail('');
             setPassword('');
+            setNewPassword('');
+            setIsNewPasswordRequired(false);
+        } else if (result.newPasswordRequired) {
+            setIsNewPasswordRequired(true);
+            setError(result.message || 'Ju duhet të vendosni një fjalëkalim të ri.');
         } else {
-            setError('Invalid credentials. Please try again.');
+            setError(result.message || 'Invalid credentials. Please try again.');
         }
     };
 
@@ -64,9 +89,23 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
-                                required
+                                required={!isNewPasswordRequired}
+                                disabled={isNewPasswordRequired}
                             />
                         </div>
+                        {isNewPasswordRequired && (
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Fjalëkalimi i ri</label>
+                                <input
+                                    type="password"
+                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-teal-500 transition-all text-slate-900 dark:text-white"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    placeholder="Fjalëkalimi i ri"
+                                    required
+                                />
+                            </div>
+                        )}
 
                         {error && (
                             <div className="flex items-center gap-2 text-red-500 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-900">
@@ -79,13 +118,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                             type="submit"
                             className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl hover:opacity-90 transition-opacity mt-4"
                         >
-                            Hyni në llogari
+                            {isNewPasswordRequired ? 'Vendos fjalëkalim të ri' : 'Hyni në llogari'}
                         </button>
                     </form>
-                    
-                    <div className="mt-6 text-center text-xs text-slate-500">
-                        Default: loriksyla@gmail.com / LorikSyla12
-                    </div>
                 </div>
             </div>
         </div>

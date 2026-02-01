@@ -128,7 +128,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                     <p className="text-slate-500 dark:text-slate-400">{user.email}</p>
                                 </div>
                                 <button 
-                                    onClick={() => { logout(); onClose(); }} 
+                                    onClick={async () => { await logout(); onClose(); }} 
                                     className="ml-auto text-red-500 hover:text-red-600 font-bold text-sm underline"
                                 >
                                     Dilni (Logout)
