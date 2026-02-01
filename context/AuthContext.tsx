@@ -132,6 +132,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, pass: string) => {
     try {
+      try {
+        await signOut();
+      } catch {
+        // Ignore if no active session
+      }
       const result = await signIn({ username: email, password: pass });
       if (result.nextStep?.signInStep === 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED') {
         return { ok: false, newPasswordRequired: true, message: 'Ju duhet të vendosni një fjalëkalim të ri.' };
@@ -153,6 +158,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUpWithEmail = async (email: string, password: string, name: string) => {
     try {
+      try {
+        await signOut();
+      } catch {
+        // Ignore if no active session
+      }
       const result = await signUp({
         username: email,
         password,
