@@ -8,9 +8,13 @@ interface LoginModalProps {
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
-    const { login, completeNewPassword } = useAuth();
+    const { login, completeNewPassword, signUpWithEmail, confirmSignUpCode } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [fullName, setFullName] = useState('');
+    const [confirmCode, setConfirmCode] = useState('');
+    const [mode, setMode] = useState<'login' | 'signup'>('login');
+    const [needsConfirmation, setNeedsConfirmation] = useState(false);
     const [newPassword, setNewPassword] = useState('');
     const [isNewPasswordRequired, setIsNewPasswordRequired] = useState(false);
     const [error, setError] = useState('');
@@ -20,6 +24,40 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        if (mode === 'signup') {
+            if (needsConfirmation) {
+                if (!confirmCode) {
+                    setError('Shkruani kodin e konfirmimit.');
+                    return;
+                }
+                const confirmRes = await confirmSignUpCode(email, confirmCode);
+                if (confirmRes.ok) {
+                    setNeedsConfirmation(false);
+                    setMode('login');
+                    setConfirmCode('');
+                } else {
+                    setError(confirmRes.message || 'Konfirmimi dështoi.');
+                }
+                return;
+            }
+
+            if (!fullName) {
+                setError('Shkruani emrin dhe mbiemrin.');
+                return;
+            }
+            const signUpRes = await signUpWithEmail(email, password, fullName);
+            if (signUpRes.ok && signUpRes.confirmRequired) {
+                setNeedsConfirmation(true);
+                return;
+            }
+            if (signUpRes.ok) {
+                setMode('login');
+                setPassword('');
+                return;
+            }
+            setError(signUpRes.message || 'Regjistrimi dështoi.');
+            return;
+        }
         if (isNewPasswordRequired) {
             if (!newPassword) {
                 setError('Ju lutem vendosni fjalëkalimin e ri.');
@@ -46,6 +84,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             setPassword('');
             setNewPassword('');
             setIsNewPasswordRequired(false);
+            setMode('login');
+            setNeedsConfirmation(false);
         } else if (result.newPasswordRequired) {
             setIsNewPasswordRequired(true);
             setError(result.message || 'Ju duhet të vendosni një fjalëkalim të ri.');
@@ -70,6 +110,19 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        {mode === 'signup' && !needsConfirmation && (
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Emri dhe Mbiemri</label>
+                                <input
+                                    type="text"
+                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-teal-500 transition-all text-slate-900 dark:text-white"
+                                    value={fullName}
+                                    onChange={(e) => setFullName(e.target.value)}
+                                    placeholder="Emër Mbiemër"
+                                    required
+                                />
+                            </div>
+                        )}
                         <div>
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Email</label>
                             <input 
@@ -93,6 +146,24 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                                 disabled={isNewPasswordRequired}
                             />
                         </div>
+                        {mode === 'signup' && !needsConfirmation && (
+                            <div className="text-xs text-slate-500">
+                                Pas regjistrimit do të merrni një kod konfirmimi në email.
+                            </div>
+                        )}
+                        {mode === 'signup' && needsConfirmation && (
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Kodi i konfirmimit</label>
+                                <input
+                                    type="text"
+                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-teal-500 transition-all text-slate-900 dark:text-white"
+                                    value={confirmCode}
+                                    onChange={(e) => setConfirmCode(e.target.value)}
+                                    placeholder="123456"
+                                    required
+                                />
+                            </div>
+                        )}
                         {isNewPasswordRequired && (
                             <div>
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Fjalëkalimi i ri</label>
@@ -118,9 +189,43 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                             type="submit"
                             className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl hover:opacity-90 transition-opacity mt-4"
                         >
-                            {isNewPasswordRequired ? 'Vendos fjalëkalim të ri' : 'Hyni në llogari'}
+                            {isNewPasswordRequired
+                                ? 'Vendos fjalëkalim të ri'
+                                : mode === 'signup'
+                                ? (needsConfirmation ? 'Konfirmo kodin' : 'Regjistrohu')
+                                : 'Hyni në llogari'}
                         </button>
                     </form>
+
+                    <div className="mt-4 text-center text-xs text-slate-500">
+                        {mode === 'login' ? (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setMode('signup');
+                                    setError('');
+                                    setIsNewPasswordRequired(false);
+                                    setNeedsConfirmation(false);
+                                }}
+                                className="font-bold text-teal-600 hover:text-teal-700"
+                            >
+                                Nuk keni llogari? Regjistrohu
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setMode('login');
+                                    setError('');
+                                    setNeedsConfirmation(false);
+                                    setConfirmCode('');
+                                }}
+                                className="font-bold text-teal-600 hover:text-teal-700"
+                            >
+                                Keni llogari? Kyçu
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

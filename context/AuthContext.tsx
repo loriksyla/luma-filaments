@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   confirmSignIn,
+  confirmSignUp,
   fetchAuthSession,
   fetchUserAttributes,
   getCurrentUser,
+  signUp,
   signIn,
   signOut,
 } from 'aws-amplify/auth';
@@ -21,6 +23,8 @@ interface AuthContextType {
   orders: Order[];
   refreshProducts: () => Promise<void>;
   refreshOrders: () => Promise<void>;
+  signUpWithEmail: (email: string, password: string, name: string) => Promise<{ ok: boolean; confirmRequired?: boolean; message?: string }>;
+  confirmSignUpCode: (email: string, code: string) => Promise<{ ok: boolean; message?: string }>;
   login: (email: string, pass: string) => Promise<{ ok: boolean; newPasswordRequired?: boolean; message?: string }>;
   completeNewPassword: (newPassword: string) => Promise<{ ok: boolean; message?: string }>;
   logout: () => Promise<void>;
@@ -144,6 +148,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { ok: false, message: 'Hyrja kërkon hapa shtesë. Ju lutem provoni përsëri.' };
     } catch (err: any) {
       return { ok: false, message: err?.message || 'Hyrja dështoi. Ju lutem provoni përsëri.' };
+    }
+  };
+
+  const signUpWithEmail = async (email: string, password: string, name: string) => {
+    try {
+      const result = await signUp({
+        username: email,
+        password,
+        options: {
+          userAttributes: {
+            email,
+            name,
+          },
+        },
+      });
+      if (result.nextStep?.signUpStep === 'CONFIRM_SIGN_UP') {
+        return { ok: true, confirmRequired: true };
+      }
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, message: err?.message || 'Regjistrimi dështoi.' };
+    }
+  };
+
+  const confirmSignUpCode = async (email: string, code: string) => {
+    try {
+      await confirmSignUp({ username: email, confirmationCode: code });
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, message: err?.message || 'Konfirmimi dështoi.' };
     }
   };
 
@@ -418,6 +452,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         orders, 
         refreshProducts: () => loadProducts(user ? 'userPool' : 'identityPool'),
         refreshOrders: loadOrders,
+        signUpWithEmail,
+        confirmSignUpCode,
         login, 
         completeNewPassword,
         logout, 
