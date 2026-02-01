@@ -443,7 +443,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addOrder = async (order: Order) => {
-    const { data, errors } = await client.models.Order.create({
+    const { data, errors } = await client.mutations.placeOrder({
       orderNumber: order.id,
       customerName: order.customerName,
       customerEmail: order.customerEmail,
@@ -453,12 +453,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       items: toJsonValue(order.items),
       address: toJsonValue(order.address),
     }, { authMode: user ? 'userPool' : 'identityPool' });
+
     if (errors && errors.length > 0) {
       throw new Error(errors[0]?.message || 'Porosia nuk u krijua.');
     }
-    if (!data) {
-      throw new Error('Porosia nuk u krijua.');
+    if (!data?.ok) {
+      throw new Error(data?.message || 'Porosia nuk u krijua.');
     }
+
+    await loadProducts(user ? 'userPool' : 'identityPool');
     if (user) {
       await loadOrders();
     }

@@ -1,6 +1,16 @@
-import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { type ClientSchema, a, defineData, defineFunction } from '@aws-amplify/backend';
+
+const placeOrderHandler = defineFunction({
+  name: 'placeOrder',
+  entry: './place-order/handler.ts',
+});
 
 const schema = a.schema({
+  PlaceOrderResponse: a.customType({
+    ok: a.boolean(),
+    orderId: a.string(),
+    message: a.string(),
+  }),
   Product: a
     .model({
       name: a.string(),
@@ -44,6 +54,21 @@ const schema = a.schema({
       addresses: a.json(),
     })
     .authorization((allow) => [allow.owner(), allow.groups(['ADMINS'])]),
+  placeOrder: a
+    .mutation()
+    .arguments({
+      orderNumber: a.string().required(),
+      customerName: a.string().required(),
+      customerEmail: a.string().required(),
+      total: a.float().required(),
+      date: a.string().required(),
+      status: a.string().required(),
+      items: a.json().required(),
+      address: a.json().required(),
+    })
+    .authorization((allow) => [allow.guest(), allow.authenticated()])
+    .handler(a.handler.function(placeOrderHandler))
+    .returns(a.ref('PlaceOrderResponse')),
 });
 
 export type Schema = ClientSchema<typeof schema>;
