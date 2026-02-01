@@ -446,6 +446,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addOrder = async (order: Order) => {
+    console.log('ORDER ITEMS PAYLOAD', order.items);
+    console.log('ORDER ITEMS SANITIZED', toJsonValue(order.items));
     const { data, errors } = await client.mutations.placeOrder({
       orderNumber: order.id,
       customerName: order.customerName,
