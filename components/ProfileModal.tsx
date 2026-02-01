@@ -248,7 +248,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                                 <div className="flex justify-between items-start">
                                                     <div>
                                                         <p className="font-bold text-slate-900 dark:text-white">
-                                                            {order.id}
+                                                            #{order.id.slice(-6).toUpperCase()}
                                                         </p>
                                                         <p className="text-slate-500 dark:text-slate-400 text-sm">
                                                             {new Date(order.date).toLocaleDateString()}
