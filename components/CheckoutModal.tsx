@@ -32,7 +32,7 @@ const COUNTRIES = {
 };
 
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onClearCart, total, cartItems }) => {
-    const { user, addOrder } = useAuth();
+    const { user, addOrder, refreshOrders } = useAuth();
     
     // Mode can be 'form' (manual entry) or 'selection' (choose from saved)
     const [mode, setMode] = useState<'form' | 'selection'>('form');
@@ -154,6 +154,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
 
         try {
             await addOrder(order);
+            if (user) {
+                await refreshOrders();
+            }
             setIsSuccess(true);
         } catch (err: any) {
             setError(err?.message || 'Porosia nuk u krye. Provoni përsëri.');

@@ -449,7 +449,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!data) {
       throw new Error('Porosia nuk u krijua.');
     }
-    if (user?.role === 'admin') {
+    if (user) {
       await loadOrders();
     }
   };
