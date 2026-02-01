@@ -3,9 +3,13 @@ import { type ClientSchema, a, defineData, defineFunction } from '@aws-amplify/b
 const placeOrderHandler = defineFunction({
   name: 'placeOrder',
   entry: './place-order/handler.ts',
+  environment: {
+    AMPLIFY_DATA_DEFAULT_NAME: 'data',
+  },
 });
 
-const schema = a.schema({
+const schema = a
+  .schema({
   PlaceOrderResponse: a.customType({
     ok: a.boolean(),
     orderId: a.string(),
@@ -69,7 +73,10 @@ const schema = a.schema({
     .authorization((allow) => [allow.guest(), allow.authenticated()])
     .handler(a.handler.function(placeOrderHandler))
     .returns(a.ref('PlaceOrderResponse')),
-});
+  })
+  .authorization((allow) => [
+    allow.resource(placeOrderHandler).to(['query', 'mutate']),
+  ]);
 
 export type Schema = ClientSchema<typeof schema>;
 

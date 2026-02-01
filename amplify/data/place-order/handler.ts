@@ -1,13 +1,8 @@
 import { Amplify } from 'aws-amplify';
 import { generateClient } from 'aws-amplify/data';
-import { getAmplifyDataClientConfig } from '@aws-amplify/backend/function/runtime';
-import { env } from '$amplify/env/placeOrder';
+import { getAmplifyDataClientConfig } from '@aws-amplify/backend-function/runtime';
+import type { DataClientEnv } from '@aws-amplify/backend-function/runtime';
 import type { Schema } from '../resource';
-
-const { resourceConfig, libraryOptions } = await getAmplifyDataClientConfig(env as any);
-Amplify.configure(resourceConfig, libraryOptions);
-
-const client = generateClient<Schema>();
 
 type Handler = Schema['placeOrder']['functionHandler'];
 
@@ -24,6 +19,12 @@ const parseJson = <T>(value: unknown, fallback: T): T => {
 };
 
 export const handler: Handler = async (event) => {
+  const { resourceConfig, libraryOptions } = await getAmplifyDataClientConfig(
+    process.env as DataClientEnv
+  );
+  Amplify.configure(resourceConfig, libraryOptions);
+  const client = generateClient<Schema>();
+
   const {
     orderNumber,
     customerName,
@@ -47,40 +48,77 @@ export const handler: Handler = async (event) => {
       return { ok: false, orderId: '', message: 'Sasi e pavlefshme.' };
     }
 
-    const { data: product } = await client.models.Product.get({ id: productId });
-    if (!product) {
+    const { data: product } = await client.graphql({
+      query: /* GraphQL */ `
+        query GetProduct($id: ID!) {
+          getProduct(id: $id) {
+            id
+            name
+            stock
+          }
+        }
+      `,
+      variables: { id: productId },
+    }) as any;
+
+    const productData = product?.getProduct;
+    if (!productData) {
       return { ok: false, orderId: '', message: 'Produkti nuk u gjet.' };
     }
 
-    const currentStock = product.stock ?? 0;
+    const currentStock = productData.stock ?? 0;
     if (item.quantity > currentStock) {
       return {
         ok: false,
         orderId: '',
-        message: `Sasia e kërkuar për "${product.name ?? 'produkt'}" tejkalon stokun.`,
+        message: `Sasia e kërkuar për "${productData.name ?? 'produkt'}" tejkalon stokun.`,
       };
     }
 
-    await client.models.Product.update({
-      id: product.id,
-      stock: currentStock - item.quantity,
+    await client.graphql({
+      query: /* GraphQL */ `
+        mutation UpdateProduct($input: UpdateProductInput!) {
+          updateProduct(input: $input) {
+            id
+            stock
+          }
+        }
+      `,
+      variables: {
+        input: {
+          id: productId,
+          stock: currentStock - item.quantity,
+        },
+      },
     });
   }
 
-  const { data: order } = await client.models.Order.create({
-    orderNumber,
-    customerName,
-    customerEmail,
-    total,
-    date,
-    status: status as 'KRIJUAR' | 'NE_PROCES' | 'NE_DERGIM' | 'DOREZUAR' | 'ANULUAR',
-    items,
-    address,
-  });
+  const { data: orderResult } = await client.graphql({
+    query: /* GraphQL */ `
+      mutation CreateOrder($input: CreateOrderInput!) {
+        createOrder(input: $input) {
+          id
+        }
+      }
+    `,
+    variables: {
+      input: {
+        orderNumber,
+        customerName,
+        customerEmail,
+        total,
+        date,
+        status,
+        items,
+        address,
+      },
+    },
+  }) as any;
 
-  if (!order) {
+  const createdOrderId = orderResult?.createOrder?.id;
+  if (!createdOrderId) {
     return { ok: false, orderId: '', message: 'Porosia nuk u krijua.' };
   }
 
-  return { ok: true, orderId: order.id, message: 'OK' };
+  return { ok: true, orderId: createdOrderId, message: 'OK' };
 };
