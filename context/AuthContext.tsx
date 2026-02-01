@@ -308,7 +308,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addOrder = async (order: Order) => {
-    const { data } = await client.models.Order.create({
+    const { data, errors } = await client.models.Order.create({
       orderNumber: order.id,
       customerName: order.customerName,
       customerEmail: order.customerEmail,
@@ -318,6 +318,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       items: order.items,
       address: order.address,
     });
+    if (errors && errors.length > 0) {
+      throw new Error(errors[0]?.message || 'Porosia nuk u krijua.');
+    }
     if (!data) {
       throw new Error('Porosia nuk u krijua.');
     }
