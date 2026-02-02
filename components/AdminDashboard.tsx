@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Package, LayoutDashboard, ShoppingBag, Plus, Search, ChevronDown, Check, TrendingUp, Trash2, Pencil } from 'lucide-react';
+import { X, Package, LayoutDashboard, ShoppingBag, Plus, Search, ChevronDown, Check, TrendingUp, Trash2, Pencil, Eye, MapPin } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { OrderStatus, FilamentType, Product, Address } from '../types';
 
@@ -9,6 +9,7 @@ interface AdminDashboardProps {
 }
 
 const ORDER_STATUSES: OrderStatus[] = ['Krijuar', 'Në proces', 'Në dërgim', 'Dorëzuar', 'Anuluar'];
+const ADMIN_TAB_KEY = 'luma-admin-tab-v1';
 
 const DEFAULT_COLORS = [
     { name: 'White', hex: '#F8FAFC' },
@@ -24,9 +25,30 @@ const DEFAULT_COLORS = [
 ];
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
-    const { user, orders, products, updateOrderStatus, addProduct, updateProduct, deleteProduct, refreshOrders, refreshProducts } = useAuth();
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'products'>('dashboard');
+    const {
+        user,
+        orders,
+        products,
+        hasMoreOrders,
+        loadMoreOrders,
+        isLoadingMoreOrders,
+        updateOrderStatus,
+        addProduct,
+        updateProduct,
+        deleteProduct,
+        refreshOrders,
+        refreshProducts,
+    } = useAuth();
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'products'>(() => {
+        if (typeof window === 'undefined') return 'dashboard';
+        const stored = window.sessionStorage.getItem(ADMIN_TAB_KEY);
+        if (stored === 'orders' || stored === 'products' || stored === 'dashboard') {
+            return stored;
+        }
+        return 'dashboard';
+    });
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedAddressOrder, setSelectedAddressOrder] = useState<{ id: string; address: Address | string } | null>(null);
 
     // New/Edit Product State
     const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -45,11 +67,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
     const [isAddingProduct, setIsAddingProduct] = useState(false);
 
     useEffect(() => {
-        if (isOpen && user?.role === 'admin') {
-            refreshOrders();
-            refreshProducts();
+        if (!isOpen || user?.role !== 'admin') return;
+        if (activeTab === 'orders') {
+            void refreshOrders();
+            return;
         }
-    }, [isOpen, user, refreshOrders, refreshProducts]);
+        if (activeTab === 'products') {
+            void refreshProducts();
+            return;
+        }
+        void Promise.all([refreshOrders(), refreshProducts()]);
+    }, [isOpen, user?.role, activeTab]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        window.sessionStorage.setItem(ADMIN_TAB_KEY, activeTab);
+    }, [activeTab]);
 
     if (!isOpen || !user || user.role !== 'admin') return null;
 
@@ -57,17 +90,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
         if (!id) return '—';
         const normalized = id.replace(/^ORD-/, '');
         return `#${normalized.slice(-6).toUpperCase()}`;
-    };
-
-    const formatAddress = (value: Address | string | null | undefined) => {
-        if (!value) return '—';
-        if (typeof value === 'string') return value;
-        const name = [value.firstName, value.lastName].filter(Boolean).join(' ');
-        const line1 = value.address || '';
-        const city = value.city === 'Tjetër' ? value.customCity : value.city;
-        const line2 = [city, value.country, value.postalCode].filter(Boolean).join(', ');
-        const phone = value.phone ? `Tel: ${value.phone}` : '';
-        return [name, line1, line2, phone].filter(Boolean).join(' • ');
     };
 
     const now = new Date();
@@ -88,12 +110,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
     const deliveredOrders = orders.filter(o => o.status === 'Dorëzuar').length;
 
     // --- Filtering Logic ---
-    const filteredOrders = orders.filter(order => 
-        order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.customerEmail.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
+    const filteredOrders = orders
+        .filter(order =>
+            order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            order.customerEmail.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        .sort((a, b) => {
+            const timeA = new Date(a.date).getTime();
+            const timeB = new Date(b.date).getTime();
+            if (timeA !== timeB) return timeB - timeA;
+            return b.id.localeCompare(a.id);
+        });
     const filteredProducts = products.filter(product => 
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -346,7 +374,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                                                 order.status === 'Dorëzuar' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
                                                                 order.status === 'Anuluar' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
                                                                 order.status === 'Në dërgim' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                                                'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                                                order.status === 'Në proces' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                                                'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
                                                             }`}
                                                         >
                                                             {ORDER_STATUSES.map(status => (
@@ -359,8 +388,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                                 <td className="p-4 text-xs text-slate-500">
                                                     {order.items.length} items
                                                 </td>
-                                                <td className="p-4 text-xs text-slate-500 max-w-[260px]">
-                                                    <div className="line-clamp-3">{formatAddress(order.address)}</div>
+                                                <td className="p-4">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSelectedAddressOrder({ id: order.id, address: order.address })}
+                                                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                                                    >
+                                                        <Eye size={14} />
+                                                        View Address
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))
@@ -368,6 +404,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                 </tbody>
                             </table>
                         </div>
+                        {hasMoreOrders && !searchQuery && (
+                            <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 flex justify-center">
+                                <button
+                                    type="button"
+                                    onClick={() => void loadMoreOrders()}
+                                    disabled={isLoadingMoreOrders}
+                                    className="px-4 py-2 rounded-lg bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-70 disabled:cursor-not-allowed"
+                                >
+                                    {isLoadingMoreOrders ? 'Loading...' : 'View More'}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -570,6 +618,59 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                     </div>
                 )}
             </div>
+
+            {selectedAddressOrder && (
+                <div className="fixed inset-0 z-[140] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
+                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                            <div>
+                                <div className="text-sm font-bold text-slate-500 uppercase tracking-wider">Delivery Address</div>
+                                <div className="text-lg font-black text-slate-900 dark:text-white">{formatOrderId(selectedAddressOrder.id)}</div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedAddressOrder(null)}
+                                className="p-2 rounded-full text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <div className="flex items-start gap-3">
+                                <div className="p-2 rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-300">
+                                    <MapPin size={16} />
+                                </div>
+                                <div className="text-sm leading-7 text-slate-700 dark:text-slate-300">
+                                    {typeof selectedAddressOrder.address === 'string' ? (
+                                        <div>{selectedAddressOrder.address}</div>
+                                    ) : (
+                                        <>
+                                            <div className="font-bold text-slate-900 dark:text-white">
+                                                {[selectedAddressOrder.address.firstName, selectedAddressOrder.address.lastName].filter(Boolean).join(' ')}
+                                            </div>
+                                            <div>{selectedAddressOrder.address.address}</div>
+                                            <div>
+                                                {[
+                                                    selectedAddressOrder.address.city === 'Tjetër'
+                                                        ? selectedAddressOrder.address.customCity
+                                                        : selectedAddressOrder.address.city,
+                                                    selectedAddressOrder.address.country,
+                                                    selectedAddressOrder.address.postalCode,
+                                                ]
+                                                    .filter(Boolean)
+                                                    .join(', ')}
+                                            </div>
+                                            {selectedAddressOrder.address.phone && (
+                                                <div className="text-slate-500">Tel: {selectedAddressOrder.address.phone}</div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

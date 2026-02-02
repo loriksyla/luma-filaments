@@ -1,9 +1,9 @@
 {
   "auth": {
-    "user_pool_id": "eu-north-1_JdduMPmXn",
+    "user_pool_id": "eu-north-1_YawkqX6BX",
     "aws_region": "eu-north-1",
-    "user_pool_client_id": "2l3p2ou5d2tfmpsmko6afumom4",
-    "identity_pool_id": "eu-north-1:e225e1eb-3bfa-4c16-a288-2543be0ffd10",
+    "user_pool_client_id": "4an0817f96p66ob15l61g5ll1c",
+    "identity_pool_id": "eu-north-1:70228db8-754b-4ab1-84a8-c12b600c3146",
     "mfa_methods": [],
     "standard_required_attributes": [
       "email"
@@ -26,7 +26,7 @@
     "unauthenticated_identities_enabled": true
   },
   "data": {
-    "url": "https://jzyfc3ohljaqzejmqikdd5fche.appsync-api.eu-north-1.amazonaws.com/graphql",
+    "url": "https://izhtwbmrwfczxhsm2niz4yy4oa.appsync-api.eu-north-1.amazonaws.com/graphql",
     "aws_region": "eu-north-1",
     "default_authorization_type": "AMAZON_COGNITO_USER_POOLS",
     "authorization_types": [
@@ -153,6 +153,13 @@
               "properties": {
                 "rules": [
                   {
+                    "allow": "public",
+                    "provider": "iam",
+                    "operations": [
+                      "read"
+                    ]
+                  },
+                  {
                     "allow": "private",
                     "operations": [
                       "read"
@@ -278,6 +285,19 @@
               "type": "auth",
               "properties": {
                 "rules": [
+                  {
+                    "allow": "public",
+                    "provider": "iam",
+                    "operations": [
+                      "create"
+                    ]
+                  },
+                  {
+                    "allow": "private",
+                    "operations": [
+                      "read"
+                    ]
+                  },
                   {
                     "provider": "userPools",
                     "ownerField": "owner",
@@ -448,7 +468,94 @@
           ]
         }
       },
-      "nonModels": {}
+      "nonModels": {
+        "PlaceOrderResponse": {
+          "name": "PlaceOrderResponse",
+          "fields": {
+            "ok": {
+              "name": "ok",
+              "isArray": false,
+              "type": "Boolean",
+              "isRequired": false,
+              "attributes": []
+            },
+            "orderId": {
+              "name": "orderId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "message": {
+              "name": "message",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            }
+          }
+        }
+      },
+      "mutations": {
+        "placeOrder": {
+          "name": "placeOrder",
+          "isArray": false,
+          "type": {
+            "nonModel": "PlaceOrderResponse"
+          },
+          "isRequired": false,
+          "arguments": {
+            "orderNumber": {
+              "name": "orderNumber",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            },
+            "customerName": {
+              "name": "customerName",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            },
+            "customerEmail": {
+              "name": "customerEmail",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            },
+            "total": {
+              "name": "total",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": true
+            },
+            "date": {
+              "name": "date",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            },
+            "status": {
+              "name": "status",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            },
+            "items": {
+              "name": "items",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            },
+            "address": {
+              "name": "address",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            }
+          }
+        }
+      }
     }
   },
   "version": "1.4"

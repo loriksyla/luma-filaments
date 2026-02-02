@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.981.0",
     "@google/genai": "^1.39.0",
     "aws-amplify": "^6.16.0",
     "lucide-react": "^0.563.0",

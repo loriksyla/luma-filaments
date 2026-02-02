@@ -1,10 +1,12 @@
 import { type ClientSchema, a, defineData, defineFunction } from '@aws-amplify/backend';
 
-const placeOrderHandler = defineFunction({
+export const placeOrderHandler = defineFunction({
   name: 'placeOrder',
   entry: './place-order/handler.ts',
   environment: {
     AMPLIFY_DATA_DEFAULT_NAME: 'data',
+    ORDER_EMAIL_FROM: 'loriksyla1@gmail.com',
+    ORDER_EMAIL_ADMIN: 'loriksyla@gmail.com',
   },
 });
 
@@ -47,6 +49,7 @@ const schema = a
     })
     .authorization((allow) => [
       allow.guest().to(['create']),
+      allow.authenticated().to(['read']),
       allow.owner(),
       allow.groups(['ADMINS']),
     ]),

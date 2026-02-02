@@ -18,79 +18,85 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     const [newPassword, setNewPassword] = useState('');
     const [isNewPasswordRequired, setIsNewPasswordRequired] = useState(false);
     const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     if (!isOpen) return null;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        if (mode === 'signup') {
-            if (needsConfirmation) {
-                if (!confirmCode) {
-                    setError('Shkruani kodin e konfirmimit.');
+        setIsSubmitting(true);
+        try {
+            if (mode === 'signup') {
+                if (needsConfirmation) {
+                    if (!confirmCode) {
+                        setError('Shkruani kodin e konfirmimit.');
+                        return;
+                    }
+                    const confirmRes = await confirmSignUpCode(email, confirmCode);
+                    if (confirmRes.ok) {
+                        setNeedsConfirmation(false);
+                        setMode('login');
+                        setConfirmCode('');
+                    } else {
+                        setError(confirmRes.message || 'Konfirmimi dështoi.');
+                    }
                     return;
                 }
-                const confirmRes = await confirmSignUpCode(email, confirmCode);
-                if (confirmRes.ok) {
-                    setNeedsConfirmation(false);
+
+                if (!fullName) {
+                    setError('Shkruani emrin dhe mbiemrin.');
+                    return;
+                }
+                const signUpRes = await signUpWithEmail(email, password, fullName);
+                if (signUpRes.ok && signUpRes.confirmRequired) {
+                    setNeedsConfirmation(true);
+                    return;
+                }
+                if (signUpRes.ok) {
                     setMode('login');
-                    setConfirmCode('');
+                    setPassword('');
+                    return;
+                }
+                setError(signUpRes.message || 'Regjistrimi dështoi.');
+                return;
+            }
+            if (isNewPasswordRequired) {
+                if (!newPassword) {
+                    setError('Ju lutem vendosni fjalëkalimin e ri.');
+                    return;
+                }
+                const result = await completeNewPassword(newPassword);
+                if (result.ok) {
+                    onClose();
+                    setEmail('');
+                    setPassword('');
+                    setNewPassword('');
+                    setIsNewPasswordRequired(false);
                 } else {
-                    setError(confirmRes.message || 'Konfirmimi dështoi.');
+                    setError(result.message || 'Konfirmimi i fjalëkalimit të ri dështoi.');
                 }
                 return;
             }
 
-            if (!fullName) {
-                setError('Shkruani emrin dhe mbiemrin.');
-                return;
-            }
-            const signUpRes = await signUpWithEmail(email, password, fullName);
-            if (signUpRes.ok && signUpRes.confirmRequired) {
-                setNeedsConfirmation(true);
-                return;
-            }
-            if (signUpRes.ok) {
-                setMode('login');
-                setPassword('');
-                return;
-            }
-            setError(signUpRes.message || 'Regjistrimi dështoi.');
-            return;
-        }
-        if (isNewPasswordRequired) {
-            if (!newPassword) {
-                setError('Ju lutem vendosni fjalëkalimin e ri.');
-                return;
-            }
-            const result = await completeNewPassword(newPassword);
+            const result = await login(email, password);
             if (result.ok) {
                 onClose();
+                // Reset form
                 setEmail('');
                 setPassword('');
                 setNewPassword('');
                 setIsNewPasswordRequired(false);
+                setMode('login');
+                setNeedsConfirmation(false);
+            } else if (result.newPasswordRequired) {
+                setIsNewPasswordRequired(true);
+                setError(result.message || 'Ju duhet të vendosni një fjalëkalim të ri.');
             } else {
-                setError(result.message || 'Konfirmimi i fjalëkalimit të ri dështoi.');
+                setError(result.message || 'Invalid credentials. Please try again.');
             }
-            return;
-        }
-
-        const result = await login(email, password);
-        if (result.ok) {
-            onClose();
-            // Reset form
-            setEmail('');
-            setPassword('');
-            setNewPassword('');
-            setIsNewPasswordRequired(false);
-            setMode('login');
-            setNeedsConfirmation(false);
-        } else if (result.newPasswordRequired) {
-            setIsNewPasswordRequired(true);
-            setError(result.message || 'Ju duhet të vendosni një fjalëkalim të ri.');
-        } else {
-            setError(result.message || 'Invalid credentials. Please try again.');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -187,8 +193,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
                         <button 
                             type="submit"
-                            className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl hover:opacity-90 transition-opacity mt-4"
+                            disabled={isSubmitting}
+                            className="w-full py-4 border-2 border-black text-black font-bold rounded-xl transition-colors mt-4 hover:bg-black hover:text-white disabled:opacity-70 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                         >
+                            {isSubmitting && <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />}
                             {isNewPasswordRequired
                                 ? 'Vendos fjalëkalim të ri'
                                 : mode === 'signup'

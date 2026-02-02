@@ -1,27 +1,66 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import NavBar from './components/NavBar';
 import Hero from './components/Hero';
 import ProductCard from './components/ProductCard';
-import CartDrawer from './components/CartDrawer';
-import { CheckoutModal } from './components/CheckoutModal';
-import { LoginModal } from './components/LoginModal';
-import { ProfileModal } from './components/ProfileModal';
-import { AdminDashboard } from './components/AdminDashboard';
 import { Product, CartItem } from './types';
 import { CheckCircle2, Truck, ShieldCheck, RefreshCw } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
+const CartDrawer = lazy(() => import('./components/CartDrawer'));
+const CheckoutModal = lazy(() =>
+  import('./components/CheckoutModal').then((module) => ({ default: module.CheckoutModal }))
+);
+const LoginModal = lazy(() =>
+  import('./components/LoginModal').then((module) => ({ default: module.LoginModal }))
+);
+const ProfileModal = lazy(() =>
+  import('./components/ProfileModal').then((module) => ({ default: module.ProfileModal }))
+);
+const AdminDashboard = lazy(() =>
+  import('./components/AdminDashboard').then((module) => ({ default: module.AdminDashboard }))
+);
+
+const UI_STATE_KEY = 'luma-ui-state-v1';
+const SCROLL_KEY = 'luma-scroll-y-v1';
+
+type PersistedUiState = {
+  filter?: string;
+  isDarkMode?: boolean;
+  isCartOpen?: boolean;
+  isProfileOpen?: boolean;
+  isAdminOpen?: boolean;
+};
+
+const loadUiState = (): PersistedUiState => {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.sessionStorage.getItem(UI_STATE_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as PersistedUiState;
+  } catch {
+    return {};
+  }
+};
+
+const FullscreenLoader = ({ isDarkMode }: { isDarkMode: boolean }) => (
+  <div className={`fixed inset-0 z-[200] flex items-center justify-center ${isDarkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
+    <span className="h-6 w-6 rounded-full border-2 border-black border-t-transparent animate-spin" />
+  </div>
+);
+
 const AppContent: React.FC = () => {
-  const [filter, setFilter] = useState<string>('ALL');
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const initialUiState = loadUiState();
+  const [filter, setFilter] = useState<string>(initialUiState.filter ?? 'ALL');
+  const [isDarkMode, setIsDarkMode] = useState(initialUiState.isDarkMode ?? false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(initialUiState.isCartOpen ?? false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(initialUiState.isProfileOpen ?? false);
+  const [isAdminOpen, setIsAdminOpen] = useState(initialUiState.isAdminOpen ?? false);
+  const hasRestoredScroll = useRef(false);
   
-  const { user, products } = useAuth(); // Use products from context now
+  const { user, products, isAuthReady } = useAuth(); // Use products from context now
 
   // Toggle class on html element for Tailwind
   useEffect(() => {
@@ -31,6 +70,55 @@ const AppContent: React.FC = () => {
       document.documentElement.classList.remove('dark');
     }
   }, [isDarkMode]);
+
+  useEffect(() => {
+    if (!isAuthReady) return;
+    if (!user && isProfileOpen) {
+      setIsProfileOpen(false);
+    }
+    if (user?.role !== 'admin' && isAdminOpen) {
+      setIsAdminOpen(false);
+    }
+  }, [isAuthReady, user, isProfileOpen, isAdminOpen]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stateToPersist: PersistedUiState = {
+      filter,
+      isDarkMode,
+      isCartOpen,
+      isProfileOpen,
+      isAdminOpen,
+    };
+    window.sessionStorage.setItem(UI_STATE_KEY, JSON.stringify(stateToPersist));
+  }, [filter, isDarkMode, isCartOpen, isProfileOpen, isAdminOpen]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || hasRestoredScroll.current || !isAuthReady) return;
+    const raw = window.sessionStorage.getItem(SCROLL_KEY);
+    const savedY = raw ? Number(raw) : 0;
+    if (Number.isNaN(savedY) || savedY <= 0) {
+      hasRestoredScroll.current = true;
+      return;
+    }
+    requestAnimationFrame(() => {
+      window.scrollTo(0, savedY);
+      hasRestoredScroll.current = true;
+    });
+  }, [isAuthReady, products.length]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const persistScroll = () => {
+      window.sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
+    };
+    window.addEventListener('scroll', persistScroll, { passive: true });
+    window.addEventListener('beforeunload', persistScroll);
+    return () => {
+      window.removeEventListener('scroll', persistScroll);
+      window.removeEventListener('beforeunload', persistScroll);
+    };
+  }, []);
 
   const handleAddToCart = (product: Product, quantity: number) => {
     if (quantity <= 0 || product.stock <= 0) return;
@@ -103,10 +191,15 @@ const AppContent: React.FC = () => {
   const filteredProducts = filter === 'ALL' 
     ? products 
     : products.filter(p => p.type === filter);
+  const shouldBlockForAuthRestore = !isAuthReady && (isAdminOpen || isProfileOpen);
 
   // Calculate total number of items for the badge
   const totalCartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
   const cartTotal = cartItems.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
+
+  if (shouldBlockForAuthRestore) {
+    return <FullscreenLoader isDarkMode={isDarkMode} />;
+  }
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-slate-950 text-slate-200' : 'bg-slate-50 text-slate-900'}`}>
@@ -119,38 +212,50 @@ const AppContent: React.FC = () => {
         onAdminClick={() => setIsAdminOpen(true)}
       />
       
-      <CartDrawer 
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        cartItems={cartItems}
-        onRemoveItem={handleRemoveFromCart}
-        onUpdateQuantity={handleUpdateQuantity}
-        onSetQuantity={handleSetQuantity}
-        onCheckout={handleCheckout}
-      />
+      <Suspense fallback={null}>
+        {isCartOpen && (
+          <CartDrawer
+            isOpen={isCartOpen}
+            onClose={() => setIsCartOpen(false)}
+            cartItems={cartItems}
+            onRemoveItem={handleRemoveFromCart}
+            onUpdateQuantity={handleUpdateQuantity}
+            onSetQuantity={handleSetQuantity}
+            onCheckout={handleCheckout}
+          />
+        )}
 
-      <CheckoutModal 
-        isOpen={isCheckoutOpen}
-        onClose={() => setIsCheckoutOpen(false)}
-        onClearCart={handleClearCart}
-        total={cartTotal}
-        cartItems={cartItems}
-      />
+        {isCheckoutOpen && (
+          <CheckoutModal
+            isOpen={isCheckoutOpen}
+            onClose={() => setIsCheckoutOpen(false)}
+            onClearCart={handleClearCart}
+            total={cartTotal}
+            cartItems={cartItems}
+          />
+        )}
 
-      <LoginModal 
-        isOpen={isLoginOpen}
-        onClose={() => setIsLoginOpen(false)}
-      />
+        {isLoginOpen && (
+          <LoginModal
+            isOpen={isLoginOpen}
+            onClose={() => setIsLoginOpen(false)}
+          />
+        )}
 
-      <ProfileModal 
-        isOpen={isProfileOpen}
-        onClose={() => setIsProfileOpen(false)}
-      />
+        {isProfileOpen && (
+          <ProfileModal
+            isOpen={isProfileOpen}
+            onClose={() => setIsProfileOpen(false)}
+          />
+        )}
 
-      <AdminDashboard 
-        isOpen={isAdminOpen}
-        onClose={() => setIsAdminOpen(false)}
-      />
+        {isAdminOpen && (
+          <AdminDashboard
+            isOpen={isAdminOpen}
+            onClose={() => setIsAdminOpen(false)}
+          />
+        )}
+      </Suspense>
 
       <main>
         <Hero />

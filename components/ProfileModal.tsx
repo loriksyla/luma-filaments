@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, User, MapPin, Plus, Trash2, Check, Star, Pencil, Package } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, User, MapPin, Plus, Trash2, Check, Star, Pencil, Package, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Address } from '../types';
 
@@ -29,7 +29,7 @@ const COUNTRIES = {
 };
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
-    const { user, orders, logout, addAddress, editAddress, setDefaultAddress, deleteAddress } = useAuth();
+    const { user, orders, hasMoreOrders, loadMoreOrders, isLoadingMoreOrders, refreshOrders, logout, addAddress, editAddress, setDefaultAddress, deleteAddress } = useAuth();
     const [view, setView] = useState<'details' | 'form'>('details');
     const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -45,6 +45,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
         postalCode: '',
         phone: ''
     });
+
+    useEffect(() => {
+        if (isOpen) {
+            void refreshOrders();
+        }
+    }, [isOpen, user?.email, refreshOrders]);
 
     if (!isOpen || !user) return null;
     const myOrders = orders
@@ -132,8 +138,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                 </div>
                                 <button 
                                     onClick={async () => { await logout(); onClose(); }} 
-                                    className="ml-auto text-red-500 hover:text-red-600 font-bold text-sm underline"
+                                    className="ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:border-red-300 dark:bg-red-900/20 dark:text-red-300 dark:border-red-900/40 dark:hover:bg-red-900/30 transition-colors text-sm font-bold"
                                 >
+                                    <LogOut size={14} />
                                     Dilni (Logout)
                                 </button>
                             </div>
@@ -227,14 +234,27 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                                     : order.status === 'Anuluar'
                                                     ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
                                                     : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
-                                            const progressMap: Record<string, number> = {
-                                                'Krijuar': 25,
-                                                'Në proces': 50,
-                                                'Në dërgim': 75,
-                                                'Dorëzuar': 100,
-                                                'Anuluar': 100,
-                                            };
-                                            const progressValue = progressMap[order.status] ?? 0;
+                                            const progressSteps: Array<'Krijuar' | 'Në proces' | 'Në dërgim' | 'Dorëzuar'> = [
+                                                'Krijuar',
+                                                'Në proces',
+                                                'Në dërgim',
+                                                'Dorëzuar',
+                                            ];
+                                            const currentStep = progressSteps.indexOf(
+                                                order.status as (typeof progressSteps)[number]
+                                            );
+                                            const isCancelled = order.status === 'Anuluar';
+                                            const isCreatedOnly = order.status === 'Krijuar';
+                                            const completedSteps =
+                                                !isCancelled && !isCreatedOnly && currentStep >= 0
+                                                    ? currentStep + 1
+                                                    : 0;
+                                            const progressValue =
+                                                isCancelled || isCreatedOnly
+                                                    ? 0
+                                                    : currentStep <= 0
+                                                    ? 0
+                                                    : (currentStep / (progressSteps.length - 1)) * 100;
                                             const progressColor =
                                                 order.status === 'Dorëzuar'
                                                     ? 'bg-emerald-500'
@@ -242,9 +262,24 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                                     ? 'bg-blue-500'
                                                     : order.status === 'Në proces'
                                                     ? 'bg-amber-500'
-                                                    : order.status === 'Anuluar'
-                                                    ? 'bg-rose-500'
-                                                    : 'bg-slate-400';
+                                                    : 'bg-slate-600';
+                                            const doneDotColor =
+                                                order.status === 'Dorëzuar'
+                                                    ? 'bg-emerald-500'
+                                                    : order.status === 'Në dërgim'
+                                                    ? 'bg-blue-500'
+                                                    : order.status === 'Në proces'
+                                                    ? 'bg-amber-500'
+                                                    : 'bg-slate-600';
+                                            const itemSummary = (order.items ?? [])
+                                                .map((item) => {
+                                                    const qty = typeof item?.quantity === 'number' ? item.quantity : 0;
+                                                    const name = item?.product?.name?.trim() || 'Produkt';
+                                                    const type = item?.product?.type ? ` (${item.product.type})` : '';
+                                                    const brand = item?.product?.brand?.trim() ? ` - ${item.product.brand.trim()}` : '';
+                                                    return `${Math.max(1, qty)}x ${name}${type}${brand}`;
+                                                })
+                                                .join(', ');
                                             return (
                                             <div key={order.id} className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50">
                                                 <div className="flex justify-between items-start">
@@ -260,26 +295,67 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                                         {order.status}
                                                     </span>
                                                 </div>
-                                                <div className="mt-4">
-                                                    <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                                                <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                                                    {itemSummary || `${order.items?.length ?? 0} artikuj`}
+                                                </div>
+                                                <div className="mt-4 px-3">
+                                                    <div className="relative h-10">
+                                                        <div className="absolute left-1 right-1 top-1/2 h-1 -translate-y-1/2 rounded-full bg-slate-200 dark:bg-slate-700" />
                                                         <div
-                                                            className={`h-full ${progressColor} transition-all`}
-                                                            style={{ width: `${progressValue}%` }}
+                                                            className={`absolute left-1 top-1/2 h-1 -translate-y-1/2 rounded-full ${progressColor} transition-[width] duration-500 ease-out`}
+                                                            style={{ width: `calc((100% - 8px) * ${progressValue / 100})` }}
                                                         />
-                                                    </div>
-                                                    <div className="mt-2 flex justify-between text-[10px] uppercase tracking-wider text-slate-400">
-                                                        <span>Krijuar</span>
-                                                        <span>Në proces</span>
-                                                        <span>Në dërgim</span>
-                                                        <span>Dorëzuar</span>
+                                                        <div className="absolute inset-0 z-[1] flex items-center justify-between">
+                                                            {progressSteps.map((step, index) => {
+                                                                const isDone =
+                                                                    isCreatedOnly
+                                                                        ? index === 0
+                                                                        : index < completedSteps;
+                                                                const isCurrent = !isCancelled && index === currentStep;
+                                                                return (
+                                                                    <div key={step} className="relative flex items-center justify-center">
+                                                                        <span
+                                                                            className={`flex items-center justify-center rounded-full bg-white shadow-sm dark:bg-slate-900 ${
+                                                                                isCurrent ? 'h-5 w-5 ring-3 ring-white dark:ring-slate-900' : 'h-[14px] w-[14px] ring-2 ring-white dark:ring-slate-900'
+                                                                            }`}
+                                                                        >
+                                                                            <span
+                                                                                className={`rounded-full ${
+                                                                                    isCurrent ? 'h-3 w-3' : 'h-2.5 w-2.5'
+                                                                                } ${
+                                                                                    isDone || (isCreatedOnly && index === 0)
+                                                                                        ? doneDotColor
+                                                                                        : 'bg-slate-300 dark:bg-slate-600'
+                                                                                }`}
+                                                                            />
+                                                                        </span>
+                                                                        <span className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2 text-[9px] uppercase tracking-wider text-slate-400 whitespace-nowrap">
+                                                                            {step}
+                                                                        </span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="mt-3 flex justify-between items-center text-sm">
+                                                <div className="mt-5 flex justify-end items-center gap-3 text-sm">
                                                     <span className="text-slate-500 dark:text-slate-400">Totali</span>
                                                     <span className="font-bold text-slate-900 dark:text-white">€{order.total.toFixed(2)}</span>
                                                 </div>
                                             </div>
                                         )})}
+                                    </div>
+                                )}
+                                {hasMoreOrders && (
+                                    <div className="mt-4 flex justify-center">
+                                        <button
+                                            type="button"
+                                            onClick={() => void loadMoreOrders()}
+                                            disabled={isLoadingMoreOrders}
+                                            className="px-4 py-2 rounded-lg bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-70 disabled:cursor-not-allowed"
+                                        >
+                                            {isLoadingMoreOrders ? 'Loading...' : 'View More'}
+                                        </button>
                                     </div>
                                 )}
                             </div>

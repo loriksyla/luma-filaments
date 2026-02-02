@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
   confirmSignIn,
   confirmSignUp,
@@ -16,11 +16,16 @@ import { User, Address, Order, Product, FilamentType, OrderStatus, Role, CartIte
 // Mock Initial Data
 const INITIAL_PRODUCTS: Product[] = [];
 const INITIAL_ORDERS: Order[] = [];
+const ORDERS_PAGE_SIZE = 15;
 
 interface AuthContextType {
+  isAuthReady: boolean;
   user: User | null;
   products: Product[];
   orders: Order[];
+  hasMoreOrders: boolean;
+  loadMoreOrders: () => Promise<void>;
+  isLoadingMoreOrders: boolean;
   refreshProducts: () => Promise<void>;
   refreshOrders: () => Promise<void>;
   signUpWithEmail: (email: string, password: string, name: string) => Promise<{ ok: boolean; confirmRequired?: boolean; message?: string }>;
@@ -91,10 +96,17 @@ const statusFromBackend = (status: string | null | undefined): OrderStatus => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [userProfileId, setUserProfileId] = useState<string | null>(null);
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
+  const [ordersLoaded, setOrdersLoaded] = useState(false);
+  const [ordersNextToken, setOrdersNextToken] = useState<string | null>(null);
+  const [hasMoreOrders, setHasMoreOrders] = useState(false);
+  const [isLoadingMoreOrders, setIsLoadingMoreOrders] = useState(false);
+  const orderRefreshTimerRef = useRef<number | null>(null);
+  const currentUserRef = useRef<User | null>(null);
 
   const resolveUserRole = async (): Promise<Role> => {
     try {
@@ -145,8 +157,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const profile = await buildUserFromSession();
         if (profile) {
           const synced = await syncUserProfile(profile);
+          setOrders(INITIAL_ORDERS);
+          setOrdersLoaded(false);
+          setOrdersNextToken(null);
+          setHasMoreOrders(false);
           setUser(synced);
-          await Promise.all([loadProducts('userPool'), loadOrders()]);
+          await loadProducts('userPool');
         }
         return { ok: true };
       }
@@ -198,8 +214,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const profile = await buildUserFromSession();
         if (profile) {
           const synced = await syncUserProfile(profile);
+          setOrders(INITIAL_ORDERS);
+          setOrdersLoaded(false);
+          setOrdersNextToken(null);
+          setHasMoreOrders(false);
           setUser(synced);
-          await Promise.all([loadProducts('userPool'), loadOrders()]);
+          await loadProducts('userPool');
         }
         return { ok: true };
       }
@@ -214,6 +234,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setUserProfileId(null);
     setOrders(INITIAL_ORDERS);
+    setOrdersLoaded(false);
+    setOrdersNextToken(null);
+    setHasMoreOrders(false);
     await loadProducts('identityPool');
   };
 
@@ -242,13 +265,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProducts(mapped);
   };
 
-  const loadOrders = async () => {
-    const { data } = await client.models.Order.list({ authMode: 'userPool' });
-    if (!data) {
-      setOrders([]);
-      return;
-    }
-    const mapped = data.map((item) => ({
+  const mapOrders = (items: Array<any>) =>
+    items.map((item) => ({
       id: item.id,
       userId: 'user',
       customerName: item.customerName ?? '',
@@ -259,7 +277,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       items: fromJsonValue<CartItem[]>(item.items, []),
       address: fromJsonValue<Address | string>(item.address, ''),
     }));
-    setOrders(mapped);
+
+  const sortOrders = (items: Order[]) =>
+    [...items].sort((a, b) => {
+      const timeA = new Date(a.date).getTime();
+      const timeB = new Date(b.date).getTime();
+      if (timeA !== timeB) return timeB - timeA;
+      return b.id.localeCompare(a.id);
+    });
+
+  const mergeOrders = (existing: Order[], incoming: Order[]) => {
+    const byId = new Map<string, Order>();
+    existing.forEach((order) => byId.set(order.id, order));
+    incoming.forEach((order) => byId.set(order.id, order));
+    return sortOrders(Array.from(byId.values()));
+  };
+
+  const listOrdersPage = async (nextToken?: string | null, limit = ORDERS_PAGE_SIZE) => {
+    const currentUser = currentUserRef.current;
+    if (!currentUser) {
+      return { data: [] as Order[], nextToken: null as string | null };
+    }
+    const options: Record<string, unknown> = {
+      authMode: 'userPool',
+      limit,
+      sortDirection: 'DESC',
+    };
+    if (nextToken) {
+      options.nextToken = nextToken;
+    }
+    if (currentUser.role !== 'admin') {
+      options.filter = { customerEmail: { eq: currentUser.email } };
+    }
+    const response = await client.models.Order.list(options as any);
+    return {
+      data: mapOrders(response.data ?? []),
+      nextToken: (response as { nextToken?: string | null }).nextToken ?? null,
+    };
+  };
+
+  const loadOrders = async (reset = false, limit = ORDERS_PAGE_SIZE) => {
+    const token = reset ? null : ordersNextToken;
+    if (!reset && !token) return;
+    if (!reset) setIsLoadingMoreOrders(true);
+    try {
+      const { data, nextToken } = await listOrdersPage(token, limit);
+      if (reset) {
+        setOrders(sortOrders(data));
+      } else {
+        setOrders((prev) => mergeOrders(prev, data));
+      }
+      setOrdersNextToken(nextToken);
+      setHasMoreOrders(Boolean(nextToken));
+      setOrdersLoaded(true);
+    } finally {
+      if (!reset) setIsLoadingMoreOrders(false);
+    }
+  };
+
+  const refreshOrders = async () => {
+    await loadOrders(true, ORDERS_PAGE_SIZE);
+  };
+
+  const loadMoreOrders = async () => {
+    if (!hasMoreOrders || isLoadingMoreOrders) return;
+    await loadOrders(false, ORDERS_PAGE_SIZE);
   };
 
   const syncUserProfile = async (profile: User): Promise<User> => {
@@ -324,17 +406,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    currentUserRef.current = user;
+  }, [user]);
+
+  useEffect(() => {
     let mounted = true;
     const init = async () => {
-      const profile = await buildUserFromSession();
-      if (mounted) {
-        if (profile) {
-          const synced = await syncUserProfile(profile);
-          setUser(synced);
-          await Promise.all([loadProducts('userPool'), loadOrders()]);
-        } else {
-          setUser(null);
-          await loadProducts('identityPool');
+      try {
+        const profile = await buildUserFromSession();
+        if (mounted) {
+          if (profile) {
+            const synced = await syncUserProfile(profile);
+            setOrders(INITIAL_ORDERS);
+            setOrdersLoaded(false);
+            setOrdersNextToken(null);
+            setHasMoreOrders(false);
+            setUser(synced);
+            await loadProducts('userPool');
+          } else {
+            setUser(null);
+            setOrders(INITIAL_ORDERS);
+            setOrdersLoaded(false);
+            setOrdersNextToken(null);
+            setHasMoreOrders(false);
+            await loadProducts('identityPool');
+          }
+        }
+      } finally {
+        if (mounted) {
+          setIsAuthReady(true);
         }
       }
     };
@@ -343,6 +443,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const subscriptions: Array<{ unsubscribe: () => void }> = [];
+
+    const scheduleOrderRefresh = () => {
+      if (!ordersLoaded) return;
+      if (orderRefreshTimerRef.current !== null) {
+        window.clearTimeout(orderRefreshTimerRef.current);
+      }
+      orderRefreshTimerRef.current = window.setTimeout(() => {
+        void loadOrders(true, Math.max(orders.length, ORDERS_PAGE_SIZE));
+        orderRefreshTimerRef.current = null;
+      }, 500);
+    };
+
+    subscriptions.push(
+      client.models.Order.onCreate().subscribe({
+        next: (event: unknown) => {
+          const payload = event as
+            | { customerEmail?: string }
+            | { data?: { customerEmail?: string } }
+            | { element?: { customerEmail?: string } };
+          const customerEmail =
+            (payload as { customerEmail?: string })?.customerEmail ??
+            (payload as { data?: { customerEmail?: string } })?.data?.customerEmail ??
+            (payload as { element?: { customerEmail?: string } })?.element?.customerEmail;
+          if (user.role === 'admin' || (customerEmail && customerEmail === user.email)) {
+            scheduleOrderRefresh();
+          }
+        },
+      }),
+      client.models.Order.onUpdate().subscribe({
+        next: (event: unknown) => {
+          const payload = event as
+            | { customerEmail?: string }
+            | { data?: { customerEmail?: string } }
+            | { element?: { customerEmail?: string } };
+          const customerEmail =
+            (payload as { customerEmail?: string })?.customerEmail ??
+            (payload as { data?: { customerEmail?: string } })?.data?.customerEmail ??
+            (payload as { element?: { customerEmail?: string } })?.element?.customerEmail;
+          if (user.role === 'admin' || (customerEmail && customerEmail === user.email)) {
+            scheduleOrderRefresh();
+          }
+        },
+      }),
+      client.models.Order.onDelete().subscribe({
+        next: () => {
+          if (user.role === 'admin') {
+            scheduleOrderRefresh();
+          }
+        },
+      })
+    );
+
+    return () => {
+      if (orderRefreshTimerRef.current !== null) {
+        window.clearTimeout(orderRefreshTimerRef.current);
+        orderRefreshTimerRef.current = null;
+      }
+      subscriptions.forEach((subscription) => subscription.unsubscribe());
+    };
+  }, [user?.email, user?.role, ordersLoaded, orders.length]);
 
   const addAddress = (newAddrData: Omit<Address, 'id' | 'isDefault'>) => {
     if (!user) return;
@@ -396,7 +561,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: orderId,
       status: statusToBackend(status),
     }, { authMode: 'userPool' });
-    await loadOrders();
+    await refreshOrders();
   };
 
   const addProduct = async (product: Product) => {
@@ -477,17 +642,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     await loadProducts(user ? 'userPool' : 'identityPool');
     if (user) {
-      await loadOrders();
+      await refreshOrders();
     }
   };
 
   return (
     <AuthContext.Provider value={{ 
+        isAuthReady,
         user, 
         products, 
         orders, 
+        hasMoreOrders,
+        loadMoreOrders,
+        isLoadingMoreOrders,
         refreshProducts: () => loadProducts(user ? 'userPool' : 'identityPool'),
-        refreshOrders: loadOrders,
+        refreshOrders,
         signUpWithEmail,
         confirmSignUpCode,
         login, 
