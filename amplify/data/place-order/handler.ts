@@ -171,7 +171,7 @@ const sendOrderEmails = async (params: {
   ]);
 };
 
-export const handler: Handler = async (event) => {
+export const handler: Handler = async (event): Promise<any> => {
   try {
     const { resourceConfig, libraryOptions } = await getAmplifyDataClientConfig(
       process.env as DataClientEnv
@@ -183,12 +183,13 @@ export const handler: Handler = async (event) => {
       orderNumber,
       customerName,
       customerEmail,
-      total,
       date,
-      status,
       items,
       address,
     } = event.arguments;
+
+    const status = 'KRIJUAR';
+    let calculatedTotal = 0;
 
     const parsedItems = parseJson<OrderItem[]>(items, []);
     const parsedAddress = parseJson<AddressValue | string>(address, '');
@@ -207,7 +208,12 @@ export const handler: Handler = async (event) => {
       requestedByProduct.set(productId, (requestedByProduct.get(productId) ?? 0) + qty);
     }
 
-    const stockUpdates: Array<{ productId: string; nextStock: number }> = [];
+    const stockUpdates: Array<{
+      productId: string;
+      nextStock: number;
+      currentStock: number;
+      requestedQty: number;
+    }> = [];
 
     for (const [productId, requestedQty] of requestedByProduct.entries()) {
 
@@ -218,6 +224,7 @@ export const handler: Handler = async (event) => {
               id
               name
               stock
+              price
             }
           }
         `,
@@ -237,9 +244,13 @@ export const handler: Handler = async (event) => {
           message: `Sasia e kërkuar për "${productData.name ?? 'produkt'}" tejkalon stokun.`,
         };
       }
+      calculatedTotal += (productData.price ?? 0) * requestedQty;
+
       stockUpdates.push({
         productId,
         nextStock: currentStock - requestedQty,
+        currentStock,
+        requestedQty,
       });
     }
 
@@ -256,7 +267,7 @@ export const handler: Handler = async (event) => {
           orderNumber,
           customerName,
           customerEmail,
-          total,
+          total: calculatedTotal,
           date,
           status,
           items,
@@ -271,10 +282,10 @@ export const handler: Handler = async (event) => {
     }
 
     for (const update of stockUpdates) {
-      await client.graphql({
+      const { errors } = await client.graphql({
         query: /* GraphQL */ `
-          mutation UpdateProduct($input: UpdateProductInput!) {
-            updateProduct(input: $input) {
+          mutation UpdateProduct($input: UpdateProductInput!, $condition: ModelProductConditionInput) {
+            updateProduct(input: $input, condition: $condition) {
               id
               stock
             }
@@ -285,8 +296,18 @@ export const handler: Handler = async (event) => {
             id: update.productId,
             stock: update.nextStock,
           },
+          condition: {
+            stock: { eq: update.currentStock }
+          }
         },
-      });
+      }) as any;
+      if (errors && errors.length > 0) {
+        // Stock conditional check failed
+        throw new Error(`Sasia për produktin ndryshoi gjatë procesimit. Ju lutem provoni përsëri.`);
+        // In a production scenario with DDB, an atomic transaction using TransactWriteItems
+        // would group Order and Product updates to rollback the Order automatically.
+        // For now, at least we prevent stock going negative from race conditions.
+      }
     }
 
     try {
@@ -294,7 +315,7 @@ export const handler: Handler = async (event) => {
         orderNumber,
         customerName,
         customerEmail,
-        total,
+        total: calculatedTotal,
         date,
         status,
         items: parsedItems,

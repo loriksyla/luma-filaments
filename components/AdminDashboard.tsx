@@ -67,7 +67,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
     const [isAddingProduct, setIsAddingProduct] = useState(false);
 
     useEffect(() => {
-        if (!isOpen || user?.role !== 'admin') return;
+        if (!isOpen || !user?.isAdmin) return;
         if (activeTab === 'orders') {
             void refreshOrders();
             return;
@@ -77,14 +77,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
             return;
         }
         void Promise.all([refreshOrders(), refreshProducts()]);
-    }, [isOpen, user?.role, activeTab]);
+    }, [isOpen, user?.isAdmin, activeTab]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
         window.sessionStorage.setItem(ADMIN_TAB_KEY, activeTab);
     }, [activeTab]);
 
-    if (!isOpen || !user || user.role !== 'admin') return null;
+    if (!isOpen || !user || !user.isAdmin) return null;
 
     const formatOrderId = (id: string) => {
         if (!id) return '—';
@@ -122,7 +122,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
             if (timeA !== timeB) return timeB - timeA;
             return b.id.localeCompare(a.id);
         });
-    const filteredProducts = products.filter(product => 
+    const filteredProducts = products.filter(product =>
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (product.brand || '').toLowerCase().includes(searchQuery.toLowerCase())
@@ -131,7 +131,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
     // Helper for visual spool preview
     const VisualSpool = ({ hex, brand }: { hex: string, brand: string }) => (
         <div className="relative w-40 h-40 rounded-full border-4 border-slate-200 dark:border-slate-800 shadow-xl flex items-center justify-center bg-white dark:bg-slate-900 mx-auto">
-             <div 
+            <div
                 className="absolute inset-0 rounded-full border-[24px] opacity-90 transition-colors duration-300"
                 style={{ borderColor: hex }}
             ></div>
@@ -230,21 +230,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                 </div>
 
                 <nav className="flex-1 p-4 space-y-2">
-                    <button 
+                    <button
                         onClick={() => handleTabChange('dashboard')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${activeTab === 'dashboard' ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                     >
                         <LayoutDashboard size={20} />
                         <span className="hidden md:block">Dashboard</span>
                     </button>
-                    <button 
+                    <button
                         onClick={() => handleTabChange('orders')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${activeTab === 'orders' ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                     >
                         <ShoppingBag size={20} />
                         <span className="hidden md:block">Orders</span>
                     </button>
-                    <button 
+                    <button
                         onClick={() => handleTabChange('products')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${activeTab === 'products' ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                     >
@@ -254,10 +254,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                 </nav>
 
                 <div className="p-4 border-t border-slate-200 dark:border-slate-800">
-                     <button onClick={onClose} className="w-full flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white px-4 py-2">
+                    <button onClick={onClose} className="w-full flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white px-4 py-2">
                         <span className="hidden md:block text-sm font-bold">Close Panel</span>
                         <X size={20} className="md:ml-auto" />
-                     </button>
+                    </button>
                 </div>
             </div>
 
@@ -269,7 +269,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                         {activeTab !== 'dashboard' && (
                             <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-500 focus-within:text-slate-900 dark:focus-within:text-white focus-within:border-rose-500 transition-colors text-sm w-64">
                                 <Search size={16} />
-                                <input 
+                                <input
                                     type="text"
                                     placeholder={`Search ${activeTab}...`}
                                     className="bg-transparent outline-none w-full placeholder-slate-400"
@@ -311,7 +311,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                     const h = Math.round((value / max) * 100);
                                     return (
                                         <div key={i} className="w-full bg-rose-100 dark:bg-rose-900/20 rounded-t-lg relative group">
-                                            <div 
+                                            <div
                                                 className="absolute bottom-0 w-full bg-rose-500 rounded-t-lg transition-all duration-1000 group-hover:bg-rose-600"
                                                 style={{ height: `${h}%` }}
                                             ></div>
@@ -367,16 +367,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                                 <td className="p-4 font-bold text-slate-900 dark:text-white">€{order.total.toFixed(2)}</td>
                                                 <td className="p-4">
                                                     <div className="relative inline-block">
-                                                        <select 
+                                                        <select
                                                             value={order.status}
                                                             onChange={(e) => updateOrderStatus(order.id, e.target.value as OrderStatus)}
-                                                            className={`appearance-none pl-3 pr-8 py-1 rounded-full text-xs font-bold border-0 cursor-pointer outline-none focus:ring-2 focus:ring-rose-500 ${
-                                                                order.status === 'Dorëzuar' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                                                                order.status === 'Anuluar' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                                                                order.status === 'Në dërgim' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                                                order.status === 'Në proces' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                                                'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
-                                                            }`}
+                                                            className={`appearance-none pl-3 pr-8 py-1 rounded-full text-xs font-bold border-0 cursor-pointer outline-none focus:ring-2 focus:ring-rose-500 ${order.status === 'Dorëzuar' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                                                    order.status === 'Anuluar' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                                                        order.status === 'Në dërgim' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                                            order.status === 'Në proces' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                                                                'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                                                                }`}
                                                         >
                                                             {ORDER_STATUSES.map(status => (
                                                                 <option key={status} value={status}>{status}</option>
@@ -425,7 +424,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
                                 <div className="flex justify-between items-center mb-6">
                                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">Product Inventory</h3>
-                                    <button 
+                                    <button
                                         onClick={() => setIsAddingProduct(true)}
                                         className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold rounded-lg flex items-center gap-2 transition-colors"
                                     >
@@ -448,11 +447,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                                         <span className="text-rose-600 dark:text-rose-400 font-bold">€{product.price}</span>
                                                         <div className="flex items-center gap-1 bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-700 px-2 py-0.5">
                                                             <span className="text-xs text-slate-400 font-mono">Stock:</span>
-                                                            <input 
+                                                            <input
                                                                 type="number"
                                                                 className="w-12 bg-transparent text-xs font-bold text-slate-600 dark:text-slate-300 outline-none p-0 border-none focus:ring-0"
                                                                 defaultValue={product.stock}
-                                                                onBlur={(e) => updateProduct({...product, stock: Number(e.target.value)})}
+                                                                onBlur={(e) => updateProduct({ ...product, stock: Number(e.target.value) })}
                                                                 onKeyDown={(e) => {
                                                                     if (e.key === 'Enter') {
                                                                         e.currentTarget.blur();
@@ -462,17 +461,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                                         </div>
                                                     </div>
                                                 </div>
-                                                
+
                                                 {/* Action Buttons */}
                                                 <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleEditClick(product)}
                                                         className="p-1.5 bg-blue-50 text-blue-500 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 rounded-lg transition-colors"
                                                         title="Edit Product"
                                                     >
                                                         <Pencil size={14} />
                                                     </button>
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleDeleteClick(product.id)}
                                                         className="p-1.5 bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 rounded-lg transition-colors"
                                                         title="Delete Product"
@@ -490,11 +489,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                 <div className="flex items-center gap-2 mb-6 cursor-pointer text-slate-500 hover:text-slate-900 dark:hover:text-white" onClick={resetForm}>
                                     <span>←</span> <span className="text-sm font-bold">Back to List</span>
                                 </div>
-                                
+
                                 <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-8">
                                     {editingProductId ? 'Edit Product' : 'New Product'}
                                 </h2>
-                                
+
                                 <div className="flex flex-col md:flex-row gap-12">
                                     {/* Visual Preview */}
                                     <div className="w-full md:w-1/3 flex flex-col items-center">
@@ -511,18 +510,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                         <div className="grid grid-cols-2 gap-6">
                                             <div>
                                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Product Name</label>
-                                                <input 
-                                                    required 
+                                                <input
+                                                    required
                                                     value={newProduct.name}
-                                                    onChange={e => setNewProduct({...newProduct, name: e.target.value})}
+                                                    onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
                                                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-rose-500"
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Brand Text</label>
-                                                <input 
+                                                <input
                                                     value={newProduct.brand}
-                                                    onChange={e => setNewProduct({...newProduct, brand: e.target.value})}
+                                                    onChange={e => setNewProduct({ ...newProduct, brand: e.target.value })}
                                                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-rose-500"
                                                     placeholder="LUMA"
                                                 />
@@ -532,9 +531,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                         <div className="grid grid-cols-2 gap-6">
                                             <div>
                                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Type</label>
-                                                <select 
+                                                <select
                                                     value={newProduct.type}
-                                                    onChange={e => setNewProduct({...newProduct, type: e.target.value as FilamentType})}
+                                                    onChange={e => setNewProduct({ ...newProduct, type: e.target.value as FilamentType })}
                                                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-rose-500 appearance-none"
                                                 >
                                                     {Object.values(FilamentType).map(t => <option key={t} value={t}>{t}</option>)}
@@ -542,12 +541,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Price (€)</label>
-                                                <input 
+                                                <input
                                                     type="number"
                                                     step="0.01"
-                                                    required 
+                                                    required
                                                     value={newProduct.price}
-                                                    onChange={e => setNewProduct({...newProduct, price: Number(e.target.value)})}
+                                                    onChange={e => setNewProduct({ ...newProduct, price: Number(e.target.value) })}
                                                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-rose-500"
                                                 />
                                             </div>
@@ -560,7 +559,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                                     <button
                                                         key={c.name}
                                                         type="button"
-                                                        onClick={() => setNewProduct({...newProduct, color: c.name, hex: c.hex})}
+                                                        onClick={() => setNewProduct({ ...newProduct, color: c.name, hex: c.hex })}
                                                         className={`w-8 h-8 rounded-full border-2 transition-all ${newProduct.hex === c.hex ? 'border-rose-500 scale-110' : 'border-slate-200 dark:border-slate-700 hover:scale-105'}`}
                                                         style={{ backgroundColor: c.hex }}
                                                         title={c.name}
@@ -568,15 +567,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                                 ))}
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <input 
+                                                <input
                                                     type="color"
                                                     value={newProduct.hex}
-                                                    onChange={e => setNewProduct({...newProduct, hex: e.target.value, color: 'Custom'})}
+                                                    onChange={e => setNewProduct({ ...newProduct, hex: e.target.value, color: 'Custom' })}
                                                     className="w-10 h-10 rounded cursor-pointer"
                                                 />
-                                                <input 
+                                                <input
                                                     value={newProduct.hex}
-                                                    onChange={e => setNewProduct({...newProduct, hex: e.target.value, color: 'Custom'})}
+                                                    onChange={e => setNewProduct({ ...newProduct, hex: e.target.value, color: 'Custom' })}
                                                     className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 outline-none uppercase font-mono text-sm"
                                                     placeholder="#000000"
                                                 />
@@ -586,26 +585,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                         <div className="grid grid-cols-2 gap-6">
                                             <div>
                                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Stock Quantity</label>
-                                                <input 
+                                                <input
                                                     type="number"
-                                                    required 
+                                                    required
                                                     value={newProduct.stock}
-                                                    onChange={e => setNewProduct({...newProduct, stock: Number(e.target.value)})}
+                                                    onChange={e => setNewProduct({ ...newProduct, stock: Number(e.target.value) })}
                                                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-rose-500"
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Weight</label>
-                                                <input 
+                                                <input
                                                     value={newProduct.weight}
-                                                    onChange={e => setNewProduct({...newProduct, weight: e.target.value})}
+                                                    onChange={e => setNewProduct({ ...newProduct, weight: e.target.value })}
                                                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-rose-500"
                                                     placeholder="1kg"
                                                 />
                                             </div>
                                         </div>
 
-                                        <button 
+                                        <button
                                             type="submit"
                                             className="w-full py-4 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-rose-500/20"
                                         >

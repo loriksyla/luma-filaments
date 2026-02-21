@@ -11,7 +11,7 @@ import {
 } from 'aws-amplify/auth';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../amplify/data/resource';
-import { User, Address, Order, Product, FilamentType, OrderStatus, Role, CartItem } from '../types';
+import { User, Address, Order, Product, FilamentType, OrderStatus, CartItem } from '../types';
 
 // Mock Initial Data
 const INITIAL_PRODUCTS: Product[] = [];
@@ -108,20 +108,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const orderRefreshTimerRef = useRef<number | null>(null);
   const currentUserRef = useRef<User | null>(null);
 
-  const resolveUserRole = async (): Promise<Role> => {
+  const checkIsAdmin = async (): Promise<boolean> => {
     try {
       const session = await fetchAuthSession();
       const groups = session.tokens?.accessToken?.payload?.['cognito:groups'];
       if (Array.isArray(groups) && groups.includes('ADMINS')) {
-        return 'admin';
+        return true;
       }
       if (typeof groups === 'string' && groups === 'ADMINS') {
-        return 'admin';
+        return true;
       }
     } catch {
       // Ignore and default to user
     }
-    return 'user';
+    return false;
   };
 
   const buildUserFromSession = async (): Promise<User | null> => {
@@ -130,12 +130,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const attributes = await fetchUserAttributes();
       const email = attributes.email ?? currentUser.username;
       const name = attributes.name ?? attributes.given_name ?? email.split('@')[0];
-      const role = await resolveUserRole();
+      const isAdmin = await checkIsAdmin();
       return {
         email,
         name,
         addresses: [],
-        role,
+        isAdmin,
       };
     } catch {
       return null;
@@ -306,7 +306,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (nextToken) {
       options.nextToken = nextToken;
     }
-    if (currentUser.role !== 'admin') {
+    if (!currentUser.isAdmin) {
       options.filter = { customerEmail: { eq: currentUser.email } };
     }
     const response = await client.models.Order.list(options as any);
@@ -350,19 +350,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const record = data[0];
       setUserProfileId(record.id);
       const addresses = fromJsonValue<Address[]>(record.addresses, []);
-      const role = profile.role === 'admin' ? 'admin' : ((record.role as Role) ?? profile.role);
-      if (record.role !== role) {
-        await client.models.UserProfile.update({
-          id: record.id,
-          name: profile.name,
-          email: profile.email,
-          role,
-          addresses: toJsonValue(addresses),
-        }, { authMode: 'userPool' });
-      }
       return {
         ...profile,
-        role,
         addresses,
       };
     }
@@ -370,9 +359,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: created } = await client.models.UserProfile.create({
       name: profile.name,
       email: profile.email,
-      role: profile.role,
       addresses: toJsonValue(profile.addresses),
-    }, { authMode: 'userPool' });
+    } as any, { authMode: 'userPool' });
 
     if (created) {
       setUserProfileId(created.id);
@@ -388,18 +376,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: userProfileId,
         name: user.name,
         email: user.email,
-        role: user.role,
         addresses: toJsonValue(addresses),
-      }, { authMode: 'userPool' });
+      } as any, { authMode: 'userPool' });
       return;
     }
 
     const { data } = await client.models.UserProfile.create({
       name: user.name,
       email: user.email,
-      role: user.role,
       addresses: toJsonValue(addresses),
-    }, { authMode: 'userPool' });
+    } as any, { authMode: 'userPool' });
     if (data) {
       setUserProfileId(data.id);
     }
@@ -471,7 +457,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             (payload as { customerEmail?: string })?.customerEmail ??
             (payload as { data?: { customerEmail?: string } })?.data?.customerEmail ??
             (payload as { element?: { customerEmail?: string } })?.element?.customerEmail;
-          if (user.role === 'admin' || (customerEmail && customerEmail === user.email)) {
+          if (user.isAdmin || (customerEmail && customerEmail === user.email)) {
             scheduleOrderRefresh();
           }
         },
@@ -486,14 +472,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             (payload as { customerEmail?: string })?.customerEmail ??
             (payload as { data?: { customerEmail?: string } })?.data?.customerEmail ??
             (payload as { element?: { customerEmail?: string } })?.element?.customerEmail;
-          if (user.role === 'admin' || (customerEmail && customerEmail === user.email)) {
+          if (user.isAdmin || (customerEmail && customerEmail === user.email)) {
             scheduleOrderRefresh();
           }
         },
       }),
       client.models.Order.onDelete().subscribe({
         next: () => {
-          if (user.role === 'admin') {
+          if (user.isAdmin) {
             scheduleOrderRefresh();
           }
         },
@@ -507,21 +493,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       subscriptions.forEach((subscription) => subscription.unsubscribe());
     };
-  }, [user?.email, user?.role, ordersLoaded, orders.length]);
+  }, [user?.email, user?.isAdmin, ordersLoaded, orders.length]);
 
   const addAddress = (newAddrData: Omit<Address, 'id' | 'isDefault'>) => {
     if (!user) return;
-    
+
     const newAddress: Address = {
-        ...newAddrData,
-        id: Math.random().toString(36).substr(2, 9),
-        isDefault: user.addresses.length === 0 // First address is default
+      ...newAddrData,
+      id: Math.random().toString(36).substr(2, 9),
+      isDefault: user.addresses.length === 0 // First address is default
     };
 
     const updated = [...user.addresses, newAddress];
     setUser({
-        ...user,
-        addresses: updated
+      ...user,
+      addresses: updated
     });
     persistAddresses(updated);
   };
@@ -530,8 +516,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return;
     const updated = user.addresses.map(a => a.id === updatedAddr.id ? updatedAddr : a);
     setUser({
-        ...user,
-        addresses: updated
+      ...user,
+      addresses: updated
     });
     persistAddresses(updated);
   };
@@ -539,8 +525,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const setDefaultAddress = (id: string) => {
     if (!user) return;
     const updatedAddresses = user.addresses.map(addr => ({
-        ...addr,
-        isDefault: addr.id === id
+      ...addr,
+      isDefault: addr.id === id
     }));
     setUser({ ...user, addresses: updatedAddresses });
     persistAddresses(updatedAddresses);
@@ -550,8 +536,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return;
     const updated = user.addresses.filter(a => a.id !== id);
     setUser({
-        ...user,
-        addresses: updated
+      ...user,
+      addresses: updated
     });
     persistAddresses(updated);
   };
@@ -560,7 +546,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await client.models.Order.update({
       id: orderId,
       status: statusToBackend(status),
-    }, { authMode: 'userPool' });
+    } as any, { authMode: 'userPool' });
     await refreshOrders();
   };
 
@@ -577,7 +563,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       available: product.available,
       brand: product.brand,
       stock: product.stock,
-    }, { authMode: 'userPool' });
+    } as any, { authMode: 'userPool' });
     if (!data) {
       throw new Error('Nuk u krijua produkti.');
     }
@@ -598,7 +584,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       available: updatedProduct.available,
       brand: updatedProduct.brand,
       stock: updatedProduct.stock,
-    }, { authMode: 'userPool' });
+    } as any, { authMode: 'userPool' });
     await loadProducts('userPool');
   };
 
@@ -612,9 +598,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       orderNumber: order.id,
       customerName: order.customerName,
       customerEmail: order.customerEmail,
-      total: order.total,
       date: order.date,
-      status: statusToBackend(order.status),
       items: toJsonValue(order.items),
       address: toJsonValue(order.address),
     }, { authMode: user ? 'userPool' : 'identityPool' });
@@ -647,30 +631,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ 
-        isAuthReady,
-        user, 
-        products, 
-        orders, 
-        hasMoreOrders,
-        loadMoreOrders,
-        isLoadingMoreOrders,
-        refreshProducts: () => loadProducts(user ? 'userPool' : 'identityPool'),
-        refreshOrders,
-        signUpWithEmail,
-        confirmSignUpCode,
-        login, 
-        completeNewPassword,
-        logout, 
-        addAddress, 
-        editAddress, 
-        setDefaultAddress, 
-        deleteAddress,
-        updateOrderStatus,
-        addProduct,
-        updateProduct,
-        deleteProduct,
-        addOrder
+    <AuthContext.Provider value={{
+      isAuthReady,
+      user,
+      products,
+      orders,
+      hasMoreOrders,
+      loadMoreOrders,
+      isLoadingMoreOrders,
+      refreshProducts: () => loadProducts(user ? 'userPool' : 'identityPool'),
+      refreshOrders,
+      signUpWithEmail,
+      confirmSignUpCode,
+      login,
+      completeNewPassword,
+      logout,
+      addAddress,
+      editAddress,
+      setDefaultAddress,
+      deleteAddress,
+      updateOrderStatus,
+      addProduct,
+      updateProduct,
+      deleteProduct,
+      addOrder
     }}>
       {children}
     </AuthContext.Provider>
