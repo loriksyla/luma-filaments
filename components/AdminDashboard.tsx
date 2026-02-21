@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { X, Package, LayoutDashboard, ShoppingBag, Plus, Search, ChevronDown, Check, TrendingUp, Trash2, Pencil, Eye, MapPin } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { X, Package, LayoutDashboard, ShoppingBag, Plus, Search, ChevronDown, Check, TrendingUp, Trash2, Pencil, Eye, MapPin, Upload } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { OrderStatus, FilamentType, Product, Address } from '../types';
+import { uploadData, getUrl } from 'aws-amplify/storage';
 
 interface AdminDashboardProps {
     isOpen: boolean;
@@ -11,18 +12,20 @@ interface AdminDashboardProps {
 const ORDER_STATUSES: OrderStatus[] = ['Krijuar', 'Në proces', 'Në dërgim', 'Dorëzuar', 'Anuluar'];
 const ADMIN_TAB_KEY = 'luma-admin-tab-v1';
 
-const DEFAULT_COLORS = [
-    { name: 'White', hex: '#F8FAFC' },
-    { name: 'Black', hex: '#0F172A' },
-    { name: 'Red', hex: '#EF4444' },
-    { name: 'Blue', hex: '#3B82F6' },
-    { name: 'Green', hex: '#22C55E' },
-    { name: 'Yellow', hex: '#FACC15' },
-    { name: 'Teal', hex: '#2DD4BF' },
-    { name: 'Orange', hex: '#F97316' },
-    { name: 'Purple', hex: '#A855F7' },
-    { name: 'Grey', hex: '#64748B' },
-];
+const StorageImage = ({ path, className }: { path: string, className?: string }) => {
+    const [url, setUrl] = useState<string>('');
+    useEffect(() => {
+        if (!path) return;
+        if (path.startsWith('http') || path.startsWith('blob:') || path.startsWith('data:')) {
+            setUrl(path);
+            return;
+        }
+        getUrl({ path }).then(res => setUrl(res.url.toString())).catch(console.error);
+    }, [path]);
+
+    if (!url) return <div className={`flex items-center justify-center bg-slate-100 dark:bg-slate-800 ${className || 'w-16 h-16 rounded-lg shrink-0'}`}><Package size={24} className="text-slate-400" /></div>;
+    return <img src={url} className={`object-cover ${className || 'w-16 h-16 rounded-lg shrink-0'}`} />;
+};
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
     const {
@@ -55,15 +58,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
     const [newProduct, setNewProduct] = useState<Partial<Product>>({
         name: '',
         type: FilamentType.PLA,
-        color: 'White',
-        hex: '#F8FAFC',
         price: 24.99,
         weight: '1kg',
-        description: '',
         stock: 0,
         available: true,
-        brand: 'LUMA'
+        imageUrl: ''
     });
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string>('');
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [isAddingProduct, setIsAddingProduct] = useState(false);
 
     useEffect(() => {
@@ -128,33 +132,52 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
         (product.brand || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    // Helper for visual spool preview
-    const VisualSpool = ({ hex, brand }: { hex: string, brand: string }) => (
-        <div className="relative w-40 h-40 rounded-full border-4 border-slate-200 dark:border-slate-800 shadow-xl flex items-center justify-center bg-white dark:bg-slate-900 mx-auto">
-            <div
-                className="absolute inset-0 rounded-full border-[24px] opacity-90 transition-colors duration-300"
-                style={{ borderColor: hex }}
-            ></div>
-            <div className="w-16 h-16 bg-slate-100 dark:bg-slate-900 rounded-full z-10 flex items-center justify-center text-slate-500 dark:text-slate-700 text-[10px] font-bold tracking-widest text-center px-1">
-                {brand.toUpperCase() || 'LUMA'}
-            </div>
-            <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/20 to-transparent pointer-events-none"></div>
-        </div>
-    );
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let { width, height } = img;
+            const maxDim = 1080;
+            if (width > maxDim || height > maxDim) {
+                if (width > height) {
+                    height = Math.round((height * maxDim) / width);
+                    width = maxDim;
+                } else {
+                    width = Math.round((width * maxDim) / height);
+                    height = maxDim;
+                }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob((blob) => {
+                if (!blob) return;
+                const fileName = file.name.replace(/\.[^/.]+$/, "") + ".webp";
+                const webpFile = new File([blob], fileName, { type: 'image/webp' });
+                setImageFile(webpFile);
+                setPreviewUrl(URL.createObjectURL(webpFile));
+            }, 'image/webp', 0.8);
+        };
+    };
 
     const resetForm = () => {
         setNewProduct({
             name: '',
             type: FilamentType.PLA,
-            color: 'White',
-            hex: '#F8FAFC',
             price: 24.99,
             weight: '1kg',
-            description: '',
             stock: 0,
             available: true,
-            brand: 'LUMA'
+            imageUrl: ''
         });
+        setImageFile(null);
+        setPreviewUrl('');
         setEditingProductId(null);
         setIsAddingProduct(false);
     };
@@ -165,51 +188,75 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
         resetForm();
     };
 
-    const handleSaveProduct = (e: React.FormEvent) => {
+    const handleSaveProduct = async (e: React.FormEvent) => {
         e.preventDefault();
         if (newProduct.name && newProduct.price) {
-            if (editingProductId) {
-                // Update Existing
-                const productToUpdate = {
-                    ...newProduct,
-                    id: editingProductId,
-                    type: newProduct.type as FilamentType,
-                    // Ensure defaults if missing
-                    color: newProduct.color || 'Custom',
-                    hex: newProduct.hex || '#CCCCCC',
-                    weight: newProduct.weight || '1kg',
-                    description: newProduct.description || 'No description',
-                    imageUrl: '',
-                    available: true,
-                    brand: newProduct.brand || 'LUMA'
-                } as Product;
-                updateProduct(productToUpdate);
-            } else {
-                // Create New
-                const productToAdd: Product = {
-                    id: Math.random().toString(36).substr(2, 9),
-                    name: newProduct.name,
-                    type: newProduct.type as FilamentType,
-                    color: newProduct.color || 'Custom',
-                    hex: newProduct.hex || '#CCCCCC',
-                    price: Number(newProduct.price),
-                    weight: newProduct.weight || '1kg',
-                    description: newProduct.description || 'No description',
-                    imageUrl: '',
-                    available: true,
-                    stock: Number(newProduct.stock),
-                    brand: newProduct.brand || 'LUMA'
-                };
-                addProduct(productToAdd);
+            setIsUploading(true);
+            try {
+                let currentImageUrl = newProduct.imageUrl || '';
+
+                if (imageFile) {
+                    const fileKey = `products/${Date.now()}_${imageFile.name}`;
+                    const result = await uploadData({
+                        path: fileKey,
+                        data: imageFile,
+                        options: {
+                            contentType: 'image/webp',
+                        }
+                    }).result;
+                    currentImageUrl = result.path;
+                }
+
+                if (editingProductId) {
+                    // Update Existing
+                    const productToUpdate = {
+                        id: editingProductId,
+                        name: newProduct.name,
+                        type: newProduct.type as FilamentType,
+                        price: Number(newProduct.price),
+                        weight: newProduct.weight || '1kg',
+                        imageUrl: currentImageUrl,
+                        available: true,
+                        stock: Number(newProduct.stock),
+                    } as Product;
+                    updateProduct(productToUpdate);
+                } else {
+                    // Create New
+                    const productToAdd: Product = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        name: newProduct.name,
+                        type: newProduct.type as FilamentType,
+                        price: Number(newProduct.price),
+                        weight: newProduct.weight || '1kg',
+                        imageUrl: currentImageUrl,
+                        available: true,
+                        stock: Number(newProduct.stock),
+                    };
+                    addProduct(productToAdd);
+                }
+                resetForm();
+            } catch (error) {
+                console.error("Error saving product:", error);
+                alert("Failed to save product.");
+            } finally {
+                setIsUploading(false);
             }
-            resetForm();
         }
     };
 
-    const handleEditClick = (product: Product) => {
+    const handleEditClick = async (product: Product) => {
         setNewProduct({ ...product });
         setEditingProductId(product.id);
         setIsAddingProduct(true);
+
+        if (product.imageUrl) {
+            try {
+                const url = await getUrl({ path: product.imageUrl });
+                setPreviewUrl(url.url.toString());
+            } catch (e) {
+                console.error("Could not load preview", e);
+            }
+        }
     };
 
     const handleDeleteClick = (id: string) => {
@@ -371,10 +418,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                                             value={order.status}
                                                             onChange={(e) => updateOrderStatus(order.id, e.target.value as OrderStatus)}
                                                             className={`appearance-none pl-3 pr-8 py-1 rounded-full text-xs font-bold border-0 cursor-pointer outline-none focus:ring-2 focus:ring-rose-500 ${order.status === 'Dorëzuar' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                                                                    order.status === 'Anuluar' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                                                                        order.status === 'Në dërgim' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                                                            order.status === 'Në proces' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                                                                'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                                                                order.status === 'Anuluar' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                                                    order.status === 'Në dërgim' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                                        order.status === 'Në proces' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                                                            'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
                                                                 }`}
                                                         >
                                                             {ORDER_STATUSES.map(status => (
@@ -439,10 +486,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                     ) : (
                                         filteredProducts.map(product => (
                                             <div key={product.id} className="relative group flex gap-4 p-4 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-800/20 hover:border-rose-200 dark:hover:border-rose-900/50 transition-all">
-                                                <div className="w-16 h-16 rounded-full border-4 shrink-0 bg-white dark:bg-slate-900" style={{ borderColor: product.hex }}></div>
+                                                <StorageImage path={product.imageUrl} />
                                                 <div className="flex-1 min-w-0">
                                                     <h4 className="font-bold text-slate-900 dark:text-white truncate">{product.name}</h4>
-                                                    <p className="text-xs text-slate-500 mb-2 truncate">{product.type} • {product.brand}</p>
+                                                    <p className="text-xs text-slate-500 mb-2 truncate">{product.type}</p>
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-rose-600 dark:text-rose-400 font-bold">€{product.price}</span>
                                                         <div className="flex items-center gap-1 bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-700 px-2 py-0.5">
@@ -497,8 +544,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                 <div className="flex flex-col md:flex-row gap-12">
                                     {/* Visual Preview */}
                                     <div className="w-full md:w-1/3 flex flex-col items-center">
-                                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Live Preview</h3>
-                                        <VisualSpool hex={newProduct.hex || '#ccc'} brand={newProduct.brand || 'LUMA'} />
+                                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Product Image</h3>
+                                        <div
+                                            className="w-full aspect-square max-w-[240px] rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-rose-500 flex flex-col items-center justify-center cursor-pointer overflow-hidden bg-slate-50 dark:bg-slate-800/50 transition-colors relative group"
+                                            onClick={() => fileInputRef.current?.click()}
+                                        >
+                                            {previewUrl ? (
+                                                <>
+                                                    <img src={previewUrl.startsWith('http') || previewUrl.startsWith('blob:') || previewUrl.startsWith('data:') ? previewUrl : previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                        <span className="text-white text-sm font-bold">Change Image</span>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Upload size={32} className="text-slate-400 mb-2 group-hover:text-rose-500 transition-colors" />
+                                                    <span className="text-sm font-medium text-slate-500 group-hover:text-rose-500 transition-colors">Click to upload</span>
+                                                </>
+                                            )}
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            ref={fileInputRef}
+                                            onChange={handleImageChange}
+                                        />
                                         <div className="mt-8 text-center">
                                             <h4 className="text-xl font-bold text-slate-900 dark:text-white">{newProduct.name || 'Product Name'}</h4>
                                             <p className="text-rose-600 dark:text-rose-400 font-bold mt-1">€{newProduct.price || '0.00'}</p>
@@ -515,15 +586,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                                     value={newProduct.name}
                                                     onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
                                                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-rose-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Brand Text</label>
-                                                <input
-                                                    value={newProduct.brand}
-                                                    onChange={e => setNewProduct({ ...newProduct, brand: e.target.value })}
-                                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-rose-500"
-                                                    placeholder="LUMA"
                                                 />
                                             </div>
                                         </div>
@@ -548,36 +610,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                                     value={newProduct.price}
                                                     onChange={e => setNewProduct({ ...newProduct, price: Number(e.target.value) })}
                                                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-rose-500"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Color</label>
-                                            <div className="flex flex-wrap gap-2 mb-3">
-                                                {DEFAULT_COLORS.map(c => (
-                                                    <button
-                                                        key={c.name}
-                                                        type="button"
-                                                        onClick={() => setNewProduct({ ...newProduct, color: c.name, hex: c.hex })}
-                                                        className={`w-8 h-8 rounded-full border-2 transition-all ${newProduct.hex === c.hex ? 'border-rose-500 scale-110' : 'border-slate-200 dark:border-slate-700 hover:scale-105'}`}
-                                                        style={{ backgroundColor: c.hex }}
-                                                        title={c.name}
-                                                    />
-                                                ))}
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="color"
-                                                    value={newProduct.hex}
-                                                    onChange={e => setNewProduct({ ...newProduct, hex: e.target.value, color: 'Custom' })}
-                                                    className="w-10 h-10 rounded cursor-pointer"
-                                                />
-                                                <input
-                                                    value={newProduct.hex}
-                                                    onChange={e => setNewProduct({ ...newProduct, hex: e.target.value, color: 'Custom' })}
-                                                    className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 outline-none uppercase font-mono text-sm"
-                                                    placeholder="#000000"
                                                 />
                                             </div>
                                         </div>

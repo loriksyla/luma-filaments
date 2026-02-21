@@ -3,7 +3,7 @@ import NavBar from './components/NavBar';
 import Hero from './components/Hero';
 import ProductCard from './components/ProductCard';
 import { Product, CartItem } from './types';
-import { CheckCircle2, Truck, ShieldCheck, RefreshCw } from 'lucide-react';
+import { CheckCircle2, Truck, ShieldCheck, Package } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 const CartDrawer = lazy(() => import('./components/CartDrawer'));
@@ -263,10 +263,10 @@ const AppContent: React.FC = () => {
         {/* Features / Benefits Strip */}
         <section className="py-12 border-y border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-900/30">
           <div className="container mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8">
-            <FeatureItem icon={<CheckCircle2 className="text-teal-600 dark:text-teal-400" />} title="±0.02mm Tolerance" desc="Laser measured precision" />
-            <FeatureItem icon={<Truck className="text-teal-600 dark:text-teal-400" />} title="Next Day Shipping" desc="On orders before 2PM" />
-            <FeatureItem icon={<ShieldCheck className="text-teal-600 dark:text-teal-400" />} title="Moisture Locked" desc="Vacuum sealed w/ desiccant" />
-            <FeatureItem icon={<RefreshCw className="text-teal-600 dark:text-teal-400" />} title="Tangle Free" desc="Perfectly wound spools" />
+            <FeatureItem icon={<CheckCircle2 className="text-teal-600 dark:text-teal-400" />} title="Curated Selection" desc="Top filaments tested & verified" />
+            <FeatureItem icon={<ShieldCheck className="text-teal-600 dark:text-teal-400" />} title="Trusted Brands" desc="Bringing global quality to you" />
+            <FeatureItem icon={<Truck className="text-teal-600 dark:text-teal-400" />} title="Fast Delivery" desc="Shipping takes 1-3 days" />
+            <FeatureItem icon={<Package className="text-teal-600 dark:text-teal-400" />} title="Secure Packaging" desc="Vacuum sealed for freshness" />
           </div>
         </section>
 

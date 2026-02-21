@@ -10,14 +10,10 @@ export interface Product {
   id: string;
   name: string;
   type: FilamentType;
-  color: string;
-  hex: string;
   price: number;
   weight: string; // e.g. "1kg"
-  description: string;
   imageUrl: string;
   available: boolean;
-  brand?: string; // Added for custom text on spool
   stock: number;
 }
 

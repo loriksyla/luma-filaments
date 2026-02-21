@@ -1,6 +1,7 @@
 import { defineBackend } from '@aws-amplify/backend';
 import { auth } from './auth/resource';
 import { data, placeOrderHandler } from './data/resource';
+import { storage } from './storage/resource';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
 /**
@@ -9,6 +10,7 @@ import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 const backend = defineBackend({
   auth,
   data,
+  storage,
   placeOrderHandler,
 });
 

@@ -21,14 +21,10 @@ const schema = a
       .model({
         name: a.string(),
         type: a.enum(['PLA', 'PETG', 'ABS', 'TPU', 'ASA']),
-        color: a.string(),
-        hex: a.string(),
         price: a.float(),
         weight: a.string(),
-        description: a.string(),
         imageUrl: a.string(),
         available: a.boolean(),
-        brand: a.string(),
         stock: a.integer(),
       })
       .authorization((allow) => [

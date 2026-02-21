@@ -10,20 +10,20 @@ interface ProfileModalProps {
 
 const COUNTRIES = {
     'Kosovë': [
-        'Prishtinë', 'Prizren', 'Pejë', 'Gjakovë', 'Ferizaj', 'Gjilan', 'Mitrovicë', 
-        'Vushtrri', 'Podujevë', 'Fushë Kosovë', 'Lipjan', 'Obiliq', 'Drenas', 'Skënderaj', 
-        'Suharekë', 'Rahovec', 'Malishevë', 'Deçan', 'Klinë', 'Istog', 'Kaçanik', 'Shtime', 
-        'Kamenicë', 'Viti', 'Dragash', 'Hani i Elezit', 'Junik', 'Mamushë', 'Novobërdë', 
+        'Prishtinë', 'Prizren', 'Pejë', 'Gjakovë', 'Ferizaj', 'Gjilan', 'Mitrovicë',
+        'Vushtrri', 'Podujevë', 'Fushë Kosovë', 'Lipjan', 'Obiliq', 'Drenas', 'Skënderaj',
+        'Suharekë', 'Rahovec', 'Malishevë', 'Deçan', 'Klinë', 'Istog', 'Kaçanik', 'Shtime',
+        'Kamenicë', 'Viti', 'Dragash', 'Hani i Elezit', 'Junik', 'Mamushë', 'Novobërdë',
         'Partesh', 'Ranillug', 'Shtërpcë', 'Zveçan', 'Zubin Potok', 'Leposaviq', 'Tjetër'
     ],
     'Shqipëri': [
-        'Tiranë', 'Durrës', 'Vlorë', 'Shkodër', 'Elbasan', 'Fier', 'Korçë', 'Berat', 
-        'Lushnjë', 'Pogradec', 'Kavajë', 'Gjirokastër', 'Lezhë', 'Sarandë', 'Kukës', 
-        'Krujë', 'Burrel', 'Peshkopi', 'Kamëz', 'Vorë', 'Patos', 'Librazhd', 'Tepelenë', 
+        'Tiranë', 'Durrës', 'Vlorë', 'Shkodër', 'Elbasan', 'Fier', 'Korçë', 'Berat',
+        'Lushnjë', 'Pogradec', 'Kavajë', 'Gjirokastër', 'Lezhë', 'Sarandë', 'Kukës',
+        'Krujë', 'Burrel', 'Peshkopi', 'Kamëz', 'Vorë', 'Patos', 'Librazhd', 'Tepelenë',
         'Gramsh', 'Përmet', 'Delvinë', 'Tjetër'
     ],
     'Maqedoni e Veriut': [
-        'Shkup', 'Manastir', 'Kumanovë', 'Tetovë', 'Ohër', 'Gostivar', 'Strugë', 
+        'Shkup', 'Manastir', 'Kumanovë', 'Tetovë', 'Ohër', 'Gostivar', 'Strugë',
         'Veles', 'Dibër', 'Kërçovë', 'Strumicë', 'Prilep', 'Koçan', 'Kavadar', 'Tjetër'
     ]
 };
@@ -95,7 +95,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (editingId) {
             // Find existing address to keep isDefault status or handle in context
             const existing = user.addresses.find(a => a.id === editingId);
@@ -136,8 +136,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">{user.name}</h3>
                                     <p className="text-slate-500 dark:text-slate-400">{user.email}</p>
                                 </div>
-                                <button 
-                                    onClick={async () => { await logout(); onClose(); }} 
+                                <button
+                                    onClick={async () => { await logout(); onClose(); }}
                                     className="ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:border-red-300 dark:bg-red-900/20 dark:text-red-300 dark:border-red-900/40 dark:hover:bg-red-900/30 transition-colors text-sm font-bold"
                                 >
                                     <LogOut size={14} />
@@ -147,7 +147,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
                             <div className="mb-6 flex justify-between items-end">
                                 <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Adresat e mia</h4>
-                                <button 
+                                <button
                                     onClick={handleStartAdd}
                                     className="text-teal-600 dark:text-teal-400 font-bold text-sm flex items-center gap-1 hover:underline"
                                 >
@@ -182,7 +182,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleStartEdit(addr)}
                                                         className="p-2 text-slate-400 hover:text-blue-500 transition-colors"
                                                         title="Ndrysho"
@@ -191,14 +191,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                                     </button>
                                                     {!addr.isDefault && (
                                                         <>
-                                                            <button 
+                                                            <button
                                                                 onClick={() => setDefaultAddress(addr.id)}
                                                                 className="p-2 text-slate-400 hover:text-teal-500 transition-colors"
                                                                 title="Bëje Default"
                                                             >
                                                                 <Star size={18} />
                                                             </button>
-                                                            <button 
+                                                            <button
                                                                 onClick={() => deleteAddress(addr.id)}
                                                                 className="p-2 text-slate-400 hover:text-red-500 transition-colors"
                                                                 title="Fshij"
@@ -228,12 +228,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                                 order.status === 'Dorëzuar'
                                                     ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
                                                     : order.status === 'Në dërgim'
-                                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                                                    : order.status === 'Në proces'
-                                                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
-                                                    : order.status === 'Anuluar'
-                                                    ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
-                                                    : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
+                                                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                                                        : order.status === 'Në proces'
+                                                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                                                            : order.status === 'Anuluar'
+                                                                ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
+                                                                : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
                                             const progressSteps: Array<'Krijuar' | 'Në proces' | 'Në dërgim' | 'Dorëzuar'> = [
                                                 'Krijuar',
                                                 'Në proces',
@@ -253,97 +253,93 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                                 isCancelled || isCreatedOnly
                                                     ? 0
                                                     : currentStep <= 0
-                                                    ? 0
-                                                    : (currentStep / (progressSteps.length - 1)) * 100;
+                                                        ? 0
+                                                        : (currentStep / (progressSteps.length - 1)) * 100;
                                             const progressColor =
                                                 order.status === 'Dorëzuar'
                                                     ? 'bg-emerald-500'
                                                     : order.status === 'Në dërgim'
-                                                    ? 'bg-blue-500'
-                                                    : order.status === 'Në proces'
-                                                    ? 'bg-amber-500'
-                                                    : 'bg-slate-600';
+                                                        ? 'bg-blue-500'
+                                                        : order.status === 'Në proces'
+                                                            ? 'bg-amber-500'
+                                                            : 'bg-slate-600';
                                             const doneDotColor =
                                                 order.status === 'Dorëzuar'
                                                     ? 'bg-emerald-500'
                                                     : order.status === 'Në dërgim'
-                                                    ? 'bg-blue-500'
-                                                    : order.status === 'Në proces'
-                                                    ? 'bg-amber-500'
-                                                    : 'bg-slate-600';
+                                                        ? 'bg-blue-500'
+                                                        : order.status === 'Në proces'
+                                                            ? 'bg-amber-500'
+                                                            : 'bg-slate-600';
                                             const itemSummary = (order.items ?? [])
                                                 .map((item) => {
                                                     const qty = typeof item?.quantity === 'number' ? item.quantity : 0;
                                                     const name = item?.product?.name?.trim() || 'Produkt';
-                                                    const type = item?.product?.type ? ` (${item.product.type})` : '';
-                                                    const brand = item?.product?.brand?.trim() ? ` - ${item.product.brand.trim()}` : '';
-                                                    return `${Math.max(1, qty)}x ${name}${type}${brand}`;
+                                                    return `${Math.max(1, qty)}x ${name}${type}`;
                                                 })
                                                 .join(', ');
                                             return (
-                                            <div key={order.id} className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50">
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <p className="font-bold text-slate-900 dark:text-white">
-                                                            #{order.id.slice(-6).toUpperCase()}
-                                                        </p>
-                                                        <p className="text-slate-500 dark:text-slate-400 text-sm">
-                                                            {new Date(order.date).toLocaleDateString()}
-                                                        </p>
+                                                <div key={order.id} className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <p className="font-bold text-slate-900 dark:text-white">
+                                                                #{order.id.slice(-6).toUpperCase()}
+                                                            </p>
+                                                            <p className="text-slate-500 dark:text-slate-400 text-sm">
+                                                                {new Date(order.date).toLocaleDateString()}
+                                                            </p>
+                                                        </div>
+                                                        <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-full ${statusStyle}`}>
+                                                            {order.status}
+                                                        </span>
                                                     </div>
-                                                    <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-full ${statusStyle}`}>
-                                                        {order.status}
-                                                    </span>
-                                                </div>
-                                                <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                                                    {itemSummary || `${order.items?.length ?? 0} artikuj`}
-                                                </div>
-                                                <div className="mt-4 px-3">
-                                                    <div className="relative h-10">
-                                                        <div className="absolute left-1 right-1 top-1/2 h-1 -translate-y-1/2 rounded-full bg-slate-200 dark:bg-slate-700" />
-                                                        <div
-                                                            className={`absolute left-1 top-1/2 h-1 -translate-y-1/2 rounded-full ${progressColor} transition-[width] duration-500 ease-out`}
-                                                            style={{ width: `calc((100% - 8px) * ${progressValue / 100})` }}
-                                                        />
-                                                        <div className="absolute inset-0 z-[1] flex items-center justify-between">
-                                                            {progressSteps.map((step, index) => {
-                                                                const isDone =
-                                                                    isCreatedOnly
-                                                                        ? index === 0
-                                                                        : index < completedSteps;
-                                                                const isCurrent = !isCancelled && index === currentStep;
-                                                                return (
-                                                                    <div key={step} className="relative flex items-center justify-center">
-                                                                        <span
-                                                                            className={`flex items-center justify-center rounded-full bg-white shadow-sm dark:bg-slate-900 ${
-                                                                                isCurrent ? 'h-5 w-5 ring-3 ring-white dark:ring-slate-900' : 'h-[14px] w-[14px] ring-2 ring-white dark:ring-slate-900'
-                                                                            }`}
-                                                                        >
+                                                    <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                                                        {itemSummary || `${order.items?.length ?? 0} artikuj`}
+                                                    </div>
+                                                    <div className="mt-4 px-3">
+                                                        <div className="relative h-10">
+                                                            <div className="absolute left-1 right-1 top-1/2 h-1 -translate-y-1/2 rounded-full bg-slate-200 dark:bg-slate-700" />
+                                                            <div
+                                                                className={`absolute left-1 top-1/2 h-1 -translate-y-1/2 rounded-full ${progressColor} transition-[width] duration-500 ease-out`}
+                                                                style={{ width: `calc((100% - 8px) * ${progressValue / 100})` }}
+                                                            />
+                                                            <div className="absolute inset-0 z-[1] flex items-center justify-between">
+                                                                {progressSteps.map((step, index) => {
+                                                                    const isDone =
+                                                                        isCreatedOnly
+                                                                            ? index === 0
+                                                                            : index < completedSteps;
+                                                                    const isCurrent = !isCancelled && index === currentStep;
+                                                                    return (
+                                                                        <div key={step} className="relative flex items-center justify-center">
                                                                             <span
-                                                                                className={`rounded-full ${
-                                                                                    isCurrent ? 'h-3 w-3' : 'h-2.5 w-2.5'
-                                                                                } ${
-                                                                                    isDone || (isCreatedOnly && index === 0)
-                                                                                        ? doneDotColor
-                                                                                        : 'bg-slate-300 dark:bg-slate-600'
-                                                                                }`}
-                                                                            />
-                                                                        </span>
-                                                                        <span className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2 text-[9px] uppercase tracking-wider text-slate-400 whitespace-nowrap">
-                                                                            {step}
-                                                                        </span>
-                                                                    </div>
-                                                                );
-                                                            })}
+                                                                                className={`flex items-center justify-center rounded-full bg-white shadow-sm dark:bg-slate-900 ${isCurrent ? 'h-5 w-5 ring-3 ring-white dark:ring-slate-900' : 'h-[14px] w-[14px] ring-2 ring-white dark:ring-slate-900'
+                                                                                    }`}
+                                                                            >
+                                                                                <span
+                                                                                    className={`rounded-full ${isCurrent ? 'h-3 w-3' : 'h-2.5 w-2.5'
+                                                                                        } ${isDone || (isCreatedOnly && index === 0)
+                                                                                            ? doneDotColor
+                                                                                            : 'bg-slate-300 dark:bg-slate-600'
+                                                                                        }`}
+                                                                                />
+                                                                            </span>
+                                                                            <span className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2 text-[9px] uppercase tracking-wider text-slate-400 whitespace-nowrap">
+                                                                                {step}
+                                                                            </span>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                    <div className="mt-5 flex justify-end items-center gap-3 text-sm">
+                                                        <span className="text-slate-500 dark:text-slate-400">Totali</span>
+                                                        <span className="font-bold text-slate-900 dark:text-white">€{order.total.toFixed(2)}</span>
+                                                    </div>
                                                 </div>
-                                                <div className="mt-5 flex justify-end items-center gap-3 text-sm">
-                                                    <span className="text-slate-500 dark:text-slate-400">Totali</span>
-                                                    <span className="font-bold text-slate-900 dark:text-white">€{order.total.toFixed(2)}</span>
-                                                </div>
-                                            </div>
-                                        )})}
+                                            )
+                                        })}
                                     </div>
                                 )}
                                 {hasMoreOrders && (
@@ -362,45 +358,45 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                         </>
                     ) : (
                         <form onSubmit={handleFormSubmit} className="space-y-4">
-                             <div className="flex items-center gap-2 mb-4 text-slate-500 cursor-pointer hover:text-slate-900 dark:hover:text-white" onClick={() => setView('details')}>
+                            <div className="flex items-center gap-2 mb-4 text-slate-500 cursor-pointer hover:text-slate-900 dark:hover:text-white" onClick={() => setView('details')}>
                                 <span className="text-lg">←</span> <span className="text-sm font-bold">Kthehu</span>
                             </div>
-                            
+
                             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
                                 {editingId ? 'Ndrysho Adresën' : 'Shto Adresë të Re'}
                             </h3>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <input required placeholder="Emri" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-                                <input required placeholder="Mbiemri" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
+                                <input required placeholder="Emri" value={formData.firstName} onChange={e => setFormData({ ...formData, firstName: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
+                                <input required placeholder="Mbiemri" value={formData.lastName} onChange={e => setFormData({ ...formData, lastName: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <select 
+                                <select
                                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none appearance-none"
                                     value={formData.country}
-                                    onChange={e => setFormData({...formData, country: e.target.value, city: COUNTRIES[e.target.value as keyof typeof COUNTRIES][0]})}
+                                    onChange={e => setFormData({ ...formData, country: e.target.value, city: COUNTRIES[e.target.value as keyof typeof COUNTRIES][0] })}
                                 >
                                     {Object.keys(COUNTRIES).map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
-                                <select 
+                                <select
                                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none appearance-none"
                                     value={formData.city}
-                                    onChange={e => setFormData({...formData, city: e.target.value})}
+                                    onChange={e => setFormData({ ...formData, city: e.target.value })}
                                 >
                                     {COUNTRIES[formData.country as keyof typeof COUNTRIES].map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
                             </div>
 
-                             {formData.city === 'Tjetër' && (
-                                <input required placeholder="Shkruani Qytetin/Fshatin" value={formData.customCity} onChange={e => setFormData({...formData, customCity: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
+                            {formData.city === 'Tjetër' && (
+                                <input required placeholder="Shkruani Qytetin/Fshatin" value={formData.customCity} onChange={e => setFormData({ ...formData, customCity: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
                             )}
 
-                            <input required placeholder="Adresa" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-                            
+                            <input required placeholder="Adresa" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
+
                             <div className="grid grid-cols-2 gap-4">
-                                <input placeholder="Kodi Postar" value={formData.postalCode} onChange={e => setFormData({...formData, postalCode: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
-                                <input required placeholder="Telefoni" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
+                                <input placeholder="Kodi Postar" value={formData.postalCode} onChange={e => setFormData({ ...formData, postalCode: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
+                                <input required placeholder="Telefoni" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl outline-none" />
                             </div>
 
                             <button type="submit" className="w-full py-4 bg-teal-600 text-white font-bold rounded-xl mt-4">
