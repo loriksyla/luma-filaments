@@ -4,9 +4,26 @@ import { ArrowDown } from 'lucide-react';
 const Hero: React.FC = () => {
   const scrollToProducts = () => {
     const productsSection = document.getElementById('products');
-    if (productsSection) {
-      productsSection.scrollIntoView({ behavior: 'smooth' });
-    }
+    if (!productsSection) return;
+
+    const targetY = productsSection.getBoundingClientRect().top + window.scrollY - 96;
+    const startY = window.scrollY;
+    const diff = targetY - startY;
+    const duration = 800;
+    let startTime: number | null = null;
+
+    const easeInOutCubic = (t: number) =>
+      t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+    const step = (currentTime: number) => {
+      if (!startTime) startTime = currentTime;
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      window.scrollTo(0, startY + diff * easeInOutCubic(progress));
+      if (progress < 1) requestAnimationFrame(step);
+    };
+
+    requestAnimationFrame(step);
   };
 
   return (
@@ -19,25 +36,25 @@ const Hero: React.FC = () => {
 
       <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
         <h2 className="text-teal-600 dark:text-teal-400 font-medium tracking-[0.2em] mb-4 text-sm md:text-base animate-fade-in-up">
-          ENGINEERED FOR EXCELLENCE
+          FILLO TË PRINTOSH SOT
         </h2>
         <h1 className="text-6xl md:text-9xl font-black text-slate-900 dark:text-white tracking-tighter mb-8 leading-none">
-          PRINT <br />
+          PRINTIM 3D<br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-slate-600 to-slate-900 dark:from-slate-200 dark:to-slate-500">
-            PERFECTION
+            PËR TË GJITHË
           </span>
         </h1>
         <p className="text-slate-600 dark:text-slate-400 text-lg md:text-xl max-w-2xl mx-auto mb-12 font-light">
-            Premium dimensional accuracy. Zero tangles. The filament chosen by professionals who can't afford a failure.
+          Filamente bazë dhe të besueshme për projektet tuaja të përditshme. Gjithçka që ju duhet për të filluar pa shpenzuar shumë.
         </p>
-        
+
         <div className="flex gap-4 justify-center">
-            <button 
-                onClick={scrollToProducts}
-                className="px-10 py-4 bg-black text-white font-bold text-sm tracking-widest hover:bg-zinc-800 transition-colors shadow-lg rounded-sm cursor-pointer inline-block"
-            >
-                SHOP COLLECTION
-            </button>
+          <button
+            onClick={scrollToProducts}
+            className="px-10 py-4 bg-black text-white font-bold text-sm tracking-widest hover:bg-zinc-800 transition-colors shadow-lg rounded-sm cursor-pointer inline-block"
+          >
+            SHIKO KOLEKSIONIN
+          </button>
         </div>
       </div>
 

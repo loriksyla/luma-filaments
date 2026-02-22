@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, LogIn, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -20,7 +20,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    if (!isOpen) return null;
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -93,7 +93,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 setIsNewPasswordRequired(true);
                 setError(result.message || 'Ju duhet të vendosni një fjalëkalim të ri.');
             } else {
-                setError(result.message || 'Invalid credentials. Please try again.');
+                setError(result.message || 'Kredenciale të pavlefshme. Ju lutem provoni përsëri.');
             }
         } finally {
             setIsSubmitting(false);
@@ -101,8 +101,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[120] flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl animate-fade-in border border-slate-200 dark:border-slate-800 relative overflow-hidden">
+        <div
+            className={`fixed inset-0 bg-black/60 backdrop-blur-md z-[120] flex items-center justify-center p-4 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            onClick={onClose}
+        >
+            <div
+                className={`bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl border border-slate-200 dark:border-slate-800 relative overflow-hidden transition-all duration-300 transform ${isOpen ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-4 opacity-0'}`}
+                onClick={(e) => e.stopPropagation()}
+            >
                 <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 dark:hover:text-white z-10">
                     <X size={20} />
                 </button>
@@ -131,8 +137,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                         )}
                         <div>
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Email</label>
-                            <input 
-                                type="email" 
+                            <input
+                                type="email"
                                 className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-teal-500 transition-all text-slate-900 dark:text-white"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -142,8 +148,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                         </div>
                         <div>
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Fjalëkalimi</label>
-                            <input 
-                                type="password" 
+                            <input
+                                type="password"
                                 className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-teal-500 transition-all text-slate-900 dark:text-white"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -191,7 +197,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                             </div>
                         )}
 
-                        <button 
+                        <button
                             type="submit"
                             disabled={isSubmitting}
                             className="w-full py-4 border-2 border-black text-black font-bold rounded-xl transition-colors mt-4 hover:bg-black hover:text-white disabled:opacity-70 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
@@ -200,8 +206,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                             {isNewPasswordRequired
                                 ? 'Vendos fjalëkalim të ri'
                                 : mode === 'signup'
-                                ? (needsConfirmation ? 'Konfirmo kodin' : 'Regjistrohu')
-                                : 'Hyni në llogari'}
+                                    ? (needsConfirmation ? 'Konfirmo kodin' : 'Regjistrohu')
+                                    : 'Hyni në llogari'}
                         </button>
                     </form>
 

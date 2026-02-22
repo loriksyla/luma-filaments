@@ -10,11 +10,24 @@ export const placeOrderHandler = defineFunction({
   },
 });
 
+export const contactHandler = defineFunction({
+  name: 'contact',
+  entry: './contact/handler.ts',
+  environment: {
+    CONTACT_EMAIL_FROM: 'gentrit.tech@gmail.com',
+    CONTACT_EMAIL_ADMIN: 'gentrit.tech@gmail.com',
+  },
+});
+
 const schema = a
   .schema({
     PlaceOrderResponse: a.customType({
       ok: a.boolean(),
       orderId: a.string(),
+      message: a.string(),
+    }),
+    ContactResponse: a.customType({
+      ok: a.boolean(),
       message: a.string(),
     }),
     Product: a
@@ -48,6 +61,18 @@ const schema = a
         allow.owner(),
         allow.groups(['ADMINS']),
       ]),
+    AuditLog: a
+      .model({
+        action: a.string().required(),
+        entityType: a.string().required(),
+        entityId: a.string().required(),
+        entityName: a.string(),
+        details: a.json(),
+        userEmail: a.string().required(),
+        userName: a.string().required(),
+        timestamp: a.string().required(),
+      })
+      .authorization((allow) => [allow.groups(['ADMINS'])]),
     UserProfile: a
       .model({
         name: a.string().required(),
@@ -68,9 +93,21 @@ const schema = a
       .authorization((allow) => [allow.guest(), allow.authenticated()])
       .handler(a.handler.function(placeOrderHandler))
       .returns(a.ref('PlaceOrderResponse')),
+    contact: a
+      .mutation()
+      .arguments({
+        name: a.string().required(),
+        email: a.string().required(),
+        subject: a.string().required(),
+        message: a.string().required(),
+      })
+      .authorization((allow) => [allow.guest(), allow.authenticated()])
+      .handler(a.handler.function(contactHandler))
+      .returns(a.ref('ContactResponse')),
   })
   .authorization((allow) => [
     allow.resource(placeOrderHandler).to(['query', 'mutate']),
+    allow.resource(contactHandler).to(['query', 'mutate']),
   ]);
 
 export type Schema = ClientSchema<typeof schema>;

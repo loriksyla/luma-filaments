@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { X, Package, LayoutDashboard, ShoppingBag, Plus, Search, ChevronDown, Check, TrendingUp, Trash2, Pencil, Eye, MapPin, Upload } from 'lucide-react';
+import { X, Package, LayoutDashboard, ShoppingBag, Plus, Search, ChevronDown, Check, TrendingUp, Trash2, Pencil, Eye, MapPin, Upload, List } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { OrderStatus, FilamentType, Product, Address } from '../types';
 import { uploadData, getUrl } from 'aws-amplify/storage';
@@ -41,12 +41,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
         deleteProduct,
         refreshOrders,
         refreshProducts,
+        refreshLogs,
+        logs,
     } = useAuth();
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'products'>(() => {
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'products' | 'logs'>(() => {
         if (typeof window === 'undefined') return 'dashboard';
         const stored = window.sessionStorage.getItem(ADMIN_TAB_KEY);
-        if (stored === 'orders' || stored === 'products' || stored === 'dashboard') {
-            return stored;
+        if (stored === 'orders' || stored === 'products' || stored === 'dashboard' || stored === 'logs') {
+            return stored as any;
         }
         return 'dashboard';
     });
@@ -80,7 +82,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
             void refreshProducts();
             return;
         }
-        void Promise.all([refreshOrders(), refreshProducts()]);
+        if (activeTab === 'logs') {
+            void refreshLogs();
+            return;
+        }
+        void Promise.all([refreshOrders(), refreshProducts(), refreshLogs()]);
     }, [isOpen, user?.isAdmin, activeTab]);
 
     useEffect(() => {
@@ -88,7 +94,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
         window.sessionStorage.setItem(ADMIN_TAB_KEY, activeTab);
     }, [activeTab]);
 
-    if (!isOpen || !user || !user.isAdmin) return null;
+    if (!user || !user.isAdmin) return null;
 
     const formatOrderId = (id: string) => {
         if (!id) return '—';
@@ -130,6 +136,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (product.brand || '').toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    const filteredLogs = logs.filter(log =>
+        log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        log.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        log.userEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ((log.entityName || '').toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -182,7 +194,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
         setIsAddingProduct(false);
     };
 
-    const handleTabChange = (tab: 'dashboard' | 'orders' | 'products') => {
+    const handleTabChange = (tab: 'dashboard' | 'orders' | 'products' | 'logs') => {
         setActiveTab(tab);
         setSearchQuery('');
         resetForm();
@@ -266,7 +278,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
     };
 
     return (
-        <div className="fixed inset-0 bg-slate-100/90 dark:bg-slate-950/90 backdrop-blur-md z-[100] flex overflow-hidden">
+        <div className={`fixed inset-0 bg-slate-100/90 dark:bg-slate-950/90 backdrop-blur-md z-[100] flex overflow-hidden transition-all duration-500 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
             {/* Sidebar */}
             <div className="w-20 md:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0">
                 <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3">
@@ -282,28 +294,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${activeTab === 'dashboard' ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                     >
                         <LayoutDashboard size={20} />
-                        <span className="hidden md:block">Dashboard</span>
+                        <span className="hidden md:block">Paneli</span>
                     </button>
                     <button
                         onClick={() => handleTabChange('orders')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${activeTab === 'orders' ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                     >
                         <ShoppingBag size={20} />
-                        <span className="hidden md:block">Orders</span>
+                        <span className="hidden md:block">Porositë</span>
                     </button>
                     <button
                         onClick={() => handleTabChange('products')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${activeTab === 'products' ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                     >
                         <Package size={20} />
-                        <span className="hidden md:block">Products</span>
+                        <span className="hidden md:block">Produktet</span>
+                    </button>
+                    <button
+                        onClick={() => handleTabChange('logs')}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${activeTab === 'logs' ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                    >
+                        <List size={20} />
+                        <span className="hidden md:block">Historiku</span>
                     </button>
                 </nav>
 
                 <div className="p-4 border-t border-slate-200 dark:border-slate-800">
-                    <button onClick={onClose} className="w-full flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white px-4 py-2">
-                        <span className="hidden md:block text-sm font-bold">Close Panel</span>
-                        <X size={20} className="md:ml-auto" />
+                    <button onClick={onClose} className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl transition-all font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:hover:bg-rose-900/40">
+                        <span className="hidden md:block text-sm">Mbyll Panelin</span>
+                        <X size={20} />
                     </button>
                 </div>
             </div>
@@ -311,14 +330,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
             {/* Main Content */}
             <div className="flex-1 overflow-y-auto p-4 md:p-8">
                 <header className="flex justify-between items-center mb-8">
-                    <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white capitalize">{activeTab}</h1>
+                    <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white capitalize">
+                        {activeTab === 'dashboard' ? 'Paneli' : activeTab === 'orders' ? 'Porositë' : activeTab === 'products' ? 'Produktet' : 'Historiku'}
+                    </h1>
                     <div className="flex items-center gap-4">
                         {activeTab !== 'dashboard' && (
                             <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-500 focus-within:text-slate-900 dark:focus-within:text-white focus-within:border-rose-500 transition-colors text-sm w-64">
                                 <Search size={16} />
                                 <input
                                     type="text"
-                                    placeholder={`Search ${activeTab}...`}
+                                    placeholder={`Kërko...`}
                                     className="bg-transparent outline-none w-full placeholder-slate-400"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -333,25 +354,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                         {/* Stats Cards */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                                <div className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Total Revenue</div>
+                                <div className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Të Ardhurat Totale</div>
                                 <div className="text-3xl font-black text-slate-900 dark:text-white">€{totalRevenue.toFixed(2)}</div>
                                 <div className="flex items-center gap-1 text-emerald-500 text-xs mt-2 font-bold">
-                                    <TrendingUp size={14} /> +12.5% this month
+                                    <TrendingUp size={14} /> +12.5% këtë muaj
                                 </div>
                             </div>
                             <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                                <div className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Total Orders</div>
+                                <div className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Porositë Totale</div>
                                 <div className="text-3xl font-black text-slate-900 dark:text-white">{totalOrders}</div>
                             </div>
                             <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                                <div className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Delivered</div>
+                                <div className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wider mb-2">Të Dorëzuara</div>
                                 <div className="text-3xl font-black text-slate-900 dark:text-white">{deliveredOrders}</div>
                             </div>
                         </div>
 
                         {/* Revenue Graph (Visual only) */}
                         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Monthly Revenue</h3>
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Të Ardhurat Mujore</h3>
                             <div className="h-64 flex items-end justify-between gap-2 md:gap-4 px-2">
                                 {monthlyRevenue.map((value, i) => {
                                     const max = Math.max(...monthlyRevenue, 1);
@@ -371,8 +392,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                 })}
                             </div>
                             <div className="flex justify-between mt-4 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span>
-                                <span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span>
+                                <span>Jan</span><span>Shk</span><span>Mar</span><span>Pri</span><span>Maj</span><span>Qer</span>
+                                <span>Krr</span><span>Gsh</span><span>Sht</span><span>Tet</span><span>Nën</span><span>Dhj</span>
                             </div>
                         </div>
                     </div>
@@ -384,20 +405,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                             <table className="w-full text-left">
                                 <thead>
                                     <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
-                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Order ID</th>
-                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Customer</th>
-                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Date</th>
-                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Total</th>
-                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Status</th>
-                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Items</th>
-                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Address</th>
+                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">ID e Porosisë</th>
+                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Klienti</th>
+                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Data</th>
+                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Totali</th>
+                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Statusi</th>
+                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Artikujt</th>
+                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Adresa</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                     {filteredOrders.length === 0 ? (
                                         <tr>
                                             <td colSpan={7} className="p-8 text-center text-slate-500">
-                                                No orders found.
+                                                Nuk u gjetën porosi.
                                             </td>
                                         </tr>
                                     ) : (
@@ -432,7 +453,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                                     </div>
                                                 </td>
                                                 <td className="p-4 text-xs text-slate-500">
-                                                    {order.items.length} items
+                                                    {order.items.length} artikuj
                                                 </td>
                                                 <td className="p-4">
                                                     <button
@@ -441,7 +462,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                                         className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                                                     >
                                                         <Eye size={14} />
-                                                        View Address
+                                                        Shiko Adresën
                                                     </button>
                                                 </td>
                                             </tr>
@@ -458,10 +479,74 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                     disabled={isLoadingMoreOrders}
                                     className="px-4 py-2 rounded-lg bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-70 disabled:cursor-not-allowed"
                                 >
-                                    {isLoadingMoreOrders ? 'Loading...' : 'View More'}
+                                    {isLoadingMoreOrders ? 'Duke u ngarkuar...' : 'Shiko më shumë'}
                                 </button>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {activeTab === 'logs' && (
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden animate-fade-in">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead>
+                                    <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
+                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Data</th>
+                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Përdoruesi</th>
+                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Veprimi</th>
+                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Produkti</th>
+                                        <th className="p-4 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Ndryshimet</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {filteredLogs.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="p-8 text-center text-slate-500">
+                                                Nuk ka të dhëna në historik.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredLogs.map(log => (
+                                            <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                                                <td className="p-4 text-xs font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                                    {new Date(log.timestamp).toLocaleString('sq-AL', { dateStyle: 'short', timeStyle: 'short' })}
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="font-bold text-slate-900 dark:text-white text-sm">{log.userName}</div>
+                                                    <div className="text-xs text-slate-500">{log.userEmail}</div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${log.action.includes('Krijoi') ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                                            log.action.includes('Fshiu') ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
+                                                                'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                                        }`}>
+                                                        {log.action}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="font-bold text-slate-900 dark:text-white text-sm truncate max-w-[150px]" title={log.entityName}>{log.entityName || 'N/A'}</div>
+                                                    <div className="text-xs text-slate-500 font-mono" title={log.entityId}>ID: {log.entityId.slice(0, 8)}...</div>
+                                                </td>
+                                                <td className="p-4 text-xs text-slate-600 dark:text-slate-300">
+                                                    {log.details && Object.keys(log.details).length > 0 ? (
+                                                        <ul className="list-disc pl-4 space-y-1">
+                                                            {Object.entries(log.details).map(([key, changes]: [string, any]) => (
+                                                                <li key={key}>
+                                                                    <span className="font-mono text-slate-500">{key}:</span> {String(changes.old)} &rarr; <span className="font-bold text-slate-900 dark:text-white">{String(changes.new)}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    ) : (
+                                                        <span className="text-slate-400 italic">Asnjë detaj ndryshimi</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
 
@@ -470,18 +555,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                         {!isAddingProduct ? (
                             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
                                 <div className="flex justify-between items-center mb-6">
-                                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Product Inventory</h3>
+                                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Inventari i Produkteve</h3>
                                     <button
                                         onClick={() => setIsAddingProduct(true)}
                                         className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold rounded-lg flex items-center gap-2 transition-colors"
                                     >
-                                        <Plus size={16} /> Add Product
+                                        <Plus size={16} /> Shto Produkt
                                     </button>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {filteredProducts.length === 0 ? (
                                         <div className="col-span-full text-center py-12 text-slate-500">
-                                            No products found matching "{searchQuery}".
+                                            Nuk u gjetën produkte që përputhen me "{searchQuery}".
                                         </div>
                                     ) : (
                                         filteredProducts.map(product => (
@@ -493,7 +578,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-rose-600 dark:text-rose-400 font-bold">€{product.price}</span>
                                                         <div className="flex items-center gap-1 bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-700 px-2 py-0.5">
-                                                            <span className="text-xs text-slate-400 font-mono">Stock:</span>
+                                                            <span className="text-xs text-slate-400 font-mono">Stoku:</span>
                                                             <input
                                                                 type="number"
                                                                 className="w-12 bg-transparent text-xs font-bold text-slate-600 dark:text-slate-300 outline-none p-0 border-none focus:ring-0"
@@ -514,14 +599,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                                     <button
                                                         onClick={() => handleEditClick(product)}
                                                         className="p-1.5 bg-blue-50 text-blue-500 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 rounded-lg transition-colors"
-                                                        title="Edit Product"
+                                                        title="Ndrysho Produktin"
                                                     >
                                                         <Pencil size={14} />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDeleteClick(product.id)}
                                                         className="p-1.5 bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 rounded-lg transition-colors"
-                                                        title="Delete Product"
+                                                        title="Fshi Produktin"
                                                     >
                                                         <Trash2 size={14} />
                                                     </button>
@@ -534,17 +619,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                         ) : (
                             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 max-w-4xl mx-auto animate-fade-in">
                                 <div className="flex items-center gap-2 mb-6 cursor-pointer text-slate-500 hover:text-slate-900 dark:hover:text-white" onClick={resetForm}>
-                                    <span>←</span> <span className="text-sm font-bold">Back to List</span>
+                                    <span>←</span> <span className="text-sm font-bold">Kthehu tek Lista</span>
                                 </div>
 
                                 <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-8">
-                                    {editingProductId ? 'Edit Product' : 'New Product'}
+                                    {editingProductId ? 'Ndrysho Produktin' : 'Produkt i Ri'}
                                 </h2>
 
                                 <div className="flex flex-col md:flex-row gap-12">
                                     {/* Visual Preview */}
                                     <div className="w-full md:w-1/3 flex flex-col items-center">
-                                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Product Image</h3>
+                                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Imazhi i Produktit</h3>
                                         <div
                                             className="w-full aspect-square max-w-[240px] rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-rose-500 flex flex-col items-center justify-center cursor-pointer overflow-hidden bg-slate-50 dark:bg-slate-800/50 transition-colors relative group"
                                             onClick={() => fileInputRef.current?.click()}
@@ -553,13 +638,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                                 <>
                                                     <img src={previewUrl.startsWith('http') || previewUrl.startsWith('blob:') || previewUrl.startsWith('data:') ? previewUrl : previewUrl} alt="Preview" className="w-full h-full object-cover" />
                                                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                                        <span className="text-white text-sm font-bold">Change Image</span>
+                                                        <span className="text-white text-sm font-bold">Ndrysho Imazhin</span>
                                                     </div>
                                                 </>
                                             ) : (
                                                 <>
                                                     <Upload size={32} className="text-slate-400 mb-2 group-hover:text-rose-500 transition-colors" />
-                                                    <span className="text-sm font-medium text-slate-500 group-hover:text-rose-500 transition-colors">Click to upload</span>
+                                                    <span className="text-sm font-medium text-slate-500 group-hover:text-rose-500 transition-colors">Kliko për të ngarkuar</span>
                                                 </>
                                             )}
                                         </div>
@@ -580,7 +665,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                     <form onSubmit={handleSaveProduct} className="flex-1 space-y-6">
                                         <div className="grid grid-cols-2 gap-6">
                                             <div>
-                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Product Name</label>
+                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Emri i Produktit</label>
                                                 <input
                                                     required
                                                     value={newProduct.name}
@@ -592,7 +677,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
 
                                         <div className="grid grid-cols-2 gap-6">
                                             <div>
-                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Type</label>
+                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Lloji</label>
                                                 <select
                                                     value={newProduct.type}
                                                     onChange={e => setNewProduct({ ...newProduct, type: e.target.value as FilamentType })}
@@ -602,7 +687,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                                 </select>
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Price (€)</label>
+                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Çmimi (€)</label>
                                                 <input
                                                     type="number"
                                                     step="0.01"
@@ -616,7 +701,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
 
                                         <div className="grid grid-cols-2 gap-6">
                                             <div>
-                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Stock Quantity</label>
+                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Sasia në Stok</label>
                                                 <input
                                                     type="number"
                                                     required
@@ -626,7 +711,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Weight</label>
+                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Pesha</label>
                                                 <input
                                                     value={newProduct.weight}
                                                     onChange={e => setNewProduct({ ...newProduct, weight: e.target.value })}
@@ -640,7 +725,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                             type="submit"
                                             className="w-full py-4 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-rose-500/20"
                                         >
-                                            {editingProductId ? 'Update Product' : 'Create Product'}
+                                            {editingProductId ? 'Përditëso Produktin' : 'Krijo Produktin'}
                                         </button>
                                     </form>
                                 </div>
@@ -655,7 +740,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                     <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
                             <div>
-                                <div className="text-sm font-bold text-slate-500 uppercase tracking-wider">Delivery Address</div>
+                                <div className="text-sm font-bold text-slate-500 uppercase tracking-wider">Adresa e Dërgesës</div>
                                 <div className="text-lg font-black text-slate-900 dark:text-white">{formatOrderId(selectedAddressOrder.id)}</div>
                             </div>
                             <button

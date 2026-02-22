@@ -79,7 +79,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
             <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">{product.name}</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 font-mono">{product.weight}</p>
             <p className={`text-xs font-bold uppercase tracking-wider mt-1 ${product.stock > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-              {product.stock > 0 ? `In stock: ${product.stock >= 10 ? '10+' : product.stock}` : 'Out of stock'}
+              {product.stock > 0 ? `Në stok: ${product.stock >= 10 ? '10+' : product.stock}` : 'Jashtë stoku'}
             </p>
           </div>
           <span className="text-lg font-bold text-teal-600 dark:text-teal-400">€{product.price.toFixed(2)}</span>
@@ -119,7 +119,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
             disabled={product.stock <= 0}
           >
             <ShoppingBag size={16} />
-            {product.stock > 0 ? 'Add' : 'Out'}
+            {product.stock > 0 ? 'Shto' : 'Nuk ka'}
           </button>
         </div>
       </div>

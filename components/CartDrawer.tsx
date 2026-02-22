@@ -87,7 +87,7 @@ const CartItemRow: React.FC<CartItemRowProps> = ({
           <button
             onClick={() => onRemoveItem(item.product.id)}
             className="text-slate-400 hover:text-red-500 transition-colors p-1"
-            title="Remove item"
+            title="Hiq artikullin"
           >
             <Trash2 size={16} />
           </button>
@@ -134,18 +134,18 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, cartItems, onR
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`cart-backdrop ${isOpen ? 'cart-backdrop-open' : ''}`}
         onClick={onClose}
       />
 
       {/* Drawer */}
-      <div className={`fixed top-0 right-0 h-full w-full md:w-[450px] bg-white dark:bg-slate-900 shadow-2xl z-[101] transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`cart-drawer bg-white dark:bg-slate-900 ${isOpen ? 'cart-drawer-open' : ''}`}>
         <div className="h-full flex flex-col">
           {/* Header */}
           <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
             <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
               <ShoppingBag size={20} />
-              YOUR CART ({cartItems.length})
+              SHPORTA JUAJ ({cartItems.length})
             </h2>
             <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500">
               <X size={20} />
@@ -157,8 +157,8 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, cartItems, onR
             {cartItems.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4">
                 <ShoppingBag size={48} className="opacity-20" />
-                <p>Your cart is empty.</p>
-                <button onClick={onClose} className="text-teal-600 dark:text-teal-400 font-bold text-sm hover:underline">Start Shopping</button>
+                <p>Shporta juaj është bosh.</p>
+                <button onClick={onClose} className="text-teal-600 dark:text-teal-400 font-bold text-sm hover:underline">Fillo Blerjen</button>
               </div>
             ) : (
               cartItems.map((item) => (
@@ -177,15 +177,15 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, cartItems, onR
           <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
             <div className="space-y-2 mb-6">
               <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-medium text-sm">Subtotal</span>
+                <span className="text-slate-500 font-medium text-sm">Nëntotali</span>
                 <span className="font-bold text-slate-900 dark:text-white">€{total.toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-medium text-sm">Shipping</span>
-                <span className="text-teal-600 dark:text-teal-400 text-sm font-bold">Free</span>
+                <span className="text-slate-500 font-medium text-sm">Dërgesa</span>
+                <span className="text-teal-600 dark:text-teal-400 text-sm font-bold">Falas</span>
               </div>
               <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-slate-800">
-                <span className="text-slate-900 dark:text-white font-black text-lg">Total</span>
+                <span className="text-slate-900 dark:text-white font-black text-lg">Totali</span>
                 <span className="text-2xl font-black text-slate-900 dark:text-white">€{total.toFixed(2)}</span>
               </div>
             </div>
@@ -194,7 +194,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, cartItems, onR
               disabled={cartItems.length === 0}
               onClick={onCheckout}
             >
-              Checkout
+              Paguaj
             </button>
           </div>
         </div>

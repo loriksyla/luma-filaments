@@ -52,7 +52,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
         }
     }, [isOpen, user?.email, refreshOrders]);
 
-    if (!isOpen || !user) return null;
+    if (!user) return null;
     const myOrders = orders
         .filter(o => o.customerEmail === user.email || o.userId === user.email)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -113,8 +113,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[120] flex items-start justify-center p-4 overflow-y-auto">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl animate-fade-in border border-slate-200 dark:border-slate-800 my-8 max-h-[90vh] overflow-hidden">
+        <div
+            className={`fixed inset-0 bg-black/60 backdrop-blur-md z-[120] flex items-start justify-center p-4 overflow-y-auto transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            onClick={onClose}
+        >
+            <div
+                className={`bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-200 dark:border-slate-800 my-8 max-h-[90vh] overflow-hidden transition-all duration-300 transform ${isOpen ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-4 opacity-0'}`}
+                onClick={(e) => e.stopPropagation()}
+            >
                 <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 rounded-t-2xl">
                     <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
                         <User size={20} />
@@ -141,7 +147,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                     className="ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:border-red-300 dark:bg-red-900/20 dark:text-red-300 dark:border-red-900/40 dark:hover:bg-red-900/30 transition-colors text-sm font-bold"
                                 >
                                     <LogOut size={14} />
-                                    Dilni (Logout)
+                                    Dilni
                                 </button>
                             </div>
 
@@ -275,6 +281,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                                 .map((item) => {
                                                     const qty = typeof item?.quantity === 'number' ? item.quantity : 0;
                                                     const name = item?.product?.name?.trim() || 'Produkt';
+                                                    const type = item?.product?.type ? ` (${item.product.type})` : '';
                                                     return `${Math.max(1, qty)}x ${name}${type}`;
                                                 })
                                                 .join(', ');
@@ -350,7 +357,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                             disabled={isLoadingMoreOrders}
                                             className="px-4 py-2 rounded-lg bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-70 disabled:cursor-not-allowed"
                                         >
-                                            {isLoadingMoreOrders ? 'Loading...' : 'View More'}
+                                            {isLoadingMoreOrders ? 'Duke u ngarkuar...' : 'Shiko më shumë'}
                                         </button>
                                     </div>
                                 )}

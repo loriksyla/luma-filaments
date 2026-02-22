@@ -10,6 +10,10 @@ export interface Product {
   id: string;
   name: string;
   type: FilamentType;
+  color?: string;
+  hex?: string;
+  description?: string;
+  brand?: string;
   price: number;
   weight: string; // e.g. "1kg"
   imageUrl: string;
@@ -57,4 +61,16 @@ export interface Order {
   status: OrderStatus;
   items: CartItem[];
   address: Address | string; // Simple string if guest, Address object if user
+}
+
+export interface AuditLog {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  entityName?: string;
+  details?: Record<string, { old: any; new: any }>;
+  userEmail: string;
+  userName: string;
+  timestamp: string;
 }

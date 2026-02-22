@@ -11,7 +11,7 @@ import {
 } from 'aws-amplify/auth';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../amplify/data/resource';
-import { User, Address, Order, Product, FilamentType, OrderStatus, CartItem } from '../types';
+import { User, Address, Order, Product, FilamentType, OrderStatus, CartItem, AuditLog } from '../types';
 
 // Mock Initial Data
 const INITIAL_PRODUCTS: Product[] = [];
@@ -23,11 +23,13 @@ interface AuthContextType {
   user: User | null;
   products: Product[];
   orders: Order[];
+  logs: AuditLog[];
   hasMoreOrders: boolean;
   loadMoreOrders: () => Promise<void>;
   isLoadingMoreOrders: boolean;
   refreshProducts: () => Promise<void>;
   refreshOrders: () => Promise<void>;
+  refreshLogs: () => Promise<void>;
   signUpWithEmail: (email: string, password: string, name: string) => Promise<{ ok: boolean; confirmRequired?: boolean; message?: string }>;
   confirmSignUpCode: (email: string, code: string) => Promise<{ ok: boolean; message?: string }>;
   login: (email: string, pass: string) => Promise<{ ok: boolean; newPasswordRequired?: boolean; message?: string }>;
@@ -101,6 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userProfileId, setUserProfileId] = useState<string | null>(null);
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
   const [ordersLoaded, setOrdersLoaded] = useState(false);
   const [ordersNextToken, setOrdersNextToken] = useState<string | null>(null);
   const [hasMoreOrders, setHasMoreOrders] = useState(false);
@@ -550,6 +553,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await refreshOrders();
   };
 
+  const createAuditLog = async (
+    action: string,
+    entityType: string,
+    entityId: string,
+    entityName?: string,
+    details?: Record<string, { old: any; new: any }>
+  ) => {
+    if (!user) return;
+    try {
+      await client.models.AuditLog.create(
+        {
+          action,
+          entityType,
+          entityId,
+          entityName,
+          details: toJsonValue(details),
+          userEmail: user.email,
+          userName: user.name,
+          timestamp: new Date().toISOString(),
+        } as any,
+        { authMode: 'userPool' }
+      );
+    } catch (error) {
+      console.error('Failed to create audit log', error);
+    }
+  };
+
   const addProduct = async (product: Product) => {
     const { data } = await client.models.Product.create({
       name: product.name,
@@ -567,10 +597,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!data) {
       throw new Error('Nuk u krijua produkti.');
     }
+    await createAuditLog('Krijoi Produkt', 'Product', data.id, product.name, {});
     await loadProducts('userPool');
   };
 
   const updateProduct = async (updatedProduct: Product) => {
+    const existing = products.find(p => p.id === updatedProduct.id);
+    const details: Record<string, { old: any; new: any }> = {};
+    if (existing) {
+      for (const key of Object.keys(updatedProduct) as (keyof Product)[]) {
+        if (existing[key] !== updatedProduct[key] && key !== 'id') {
+          details[key] = { old: existing[key], new: updatedProduct[key] };
+        }
+      }
+    }
+
     await client.models.Product.update({
       id: updatedProduct.id,
       name: updatedProduct.name,
@@ -585,11 +626,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       brand: updatedProduct.brand,
       stock: updatedProduct.stock,
     } as any, { authMode: 'userPool' });
+    await createAuditLog('Përditësoi Produkt', 'Product', updatedProduct.id, updatedProduct.name, details);
     await loadProducts('userPool');
   };
 
   const deleteProduct = async (id: string) => {
+    const existing = products.find((p) => p.id === id);
     await client.models.Product.delete({ id }, { authMode: 'userPool' });
+    if (existing) {
+      await createAuditLog('Fshiu Produkt', 'Product', id, existing.name, {});
+    }
     await loadProducts('userPool');
   };
 
@@ -636,11 +682,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user,
       products,
       orders,
+      logs,
       hasMoreOrders,
       loadMoreOrders,
       isLoadingMoreOrders,
       refreshProducts: () => loadProducts(user ? 'userPool' : 'identityPool'),
       refreshOrders,
+      refreshLogs: async () => {
+        if (!user?.isAdmin) return;
+        try {
+          const { data } = await client.models.AuditLog.list({ authMode: 'userPool' });
+          if (data) {
+            const mapped = data.map(item => ({
+              id: item.id,
+              action: item.action,
+              entityType: item.entityType,
+              entityId: item.entityId,
+              entityName: item.entityName ?? undefined,
+              details: fromJsonValue<Record<string, { old: any, new: any }>>(item.details, {}),
+              userEmail: item.userEmail,
+              userName: item.userName,
+              timestamp: item.timestamp
+            }));
+            setLogs(mapped.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      },
       signUpWithEmail,
       confirmSignUpCode,
       login,
