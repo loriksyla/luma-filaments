@@ -32,6 +32,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
     const { user, orders, hasMoreOrders, loadMoreOrders, isLoadingMoreOrders, refreshOrders, logout, addAddress, editAddress, setDefaultAddress, deleteAddress } = useAuth();
     const [view, setView] = useState<'details' | 'form'>('details');
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [hideDeliveredOrders, setHideDeliveredOrders] = useState(true);
 
     // Address Form State
     const [formData, setFormData] = useState({
@@ -56,6 +57,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
     const myOrders = orders
         .filter(o => o.customerEmail === user.email || o.userId === user.email)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const visibleOrders = hideDeliveredOrders
+        ? myOrders.filter((order) => order.status !== 'Dor\u00ebzuar')
+        : myOrders;
 
     const resetForm = () => {
         setFormData({
@@ -221,15 +225,38 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                             </div>
 
                             <div className="mt-10">
-                                <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Porositë e mia</h4>
-                                {myOrders.length === 0 ? (
+                                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                    <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Porositë e mia</h4>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={hideDeliveredOrders}
+                                        onClick={() => setHideDeliveredOrders((prev) => !prev)}
+                                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs font-bold text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
+                                    >
+                                        <span>{'Fshih të dorëzuarat'}</span>
+                                        <span
+                                            className={`relative h-5 w-9 rounded-full transition-colors ${hideDeliveredOrders ? 'bg-teal-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                            aria-hidden="true"
+                                        >
+                                            <span
+                                                className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white transition-transform ${hideDeliveredOrders ? 'translate-x-4' : 'translate-x-0'}`}
+                                            />
+                                        </span>
+                                    </button>
+                                </div>
+                                {visibleOrders.length === 0 ? (
                                     <div className="p-8 text-center bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
                                         <Package className="mx-auto text-slate-400 mb-2" size={32} />
-                                        <p className="text-slate-500 dark:text-slate-400">Nuk keni ende asnjë porosi.</p>
+                                        <p className="text-slate-500 dark:text-slate-400">
+                                            {myOrders.length === 0
+                                                ? 'Nuk keni ende asnjë porosi.'
+                                                : 'Të gjitha porositë e dorëzuara po fshihen nga filtri.'}
+                                        </p>
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        {myOrders.map(order => {
+                                        {visibleOrders.map(order => {
                                             const statusStyle =
                                                 order.status === 'Dorëzuar'
                                                     ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
