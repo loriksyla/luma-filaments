@@ -29,10 +29,6 @@ const SCROLL_KEY = 'luma-scroll-y-v1';
 type PersistedUiState = {
   filter?: string;
   isDarkMode?: boolean;
-  isCartOpen?: boolean;
-  isProfileOpen?: boolean;
-  isAdminOpen?: boolean;
-  isContactOpen?: boolean;
 };
 
 const loadUiState = (): PersistedUiState => {
@@ -46,6 +42,13 @@ const loadUiState = (): PersistedUiState => {
   }
 };
 
+const getSystemPrefersDark = (): boolean => {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return false;
+  }
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+};
+
 const FullscreenLoader = ({ isDarkMode }: { isDarkMode: boolean }) => (
   <div className={`fixed inset-0 z-[200] flex items-center justify-center ${isDarkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
     <span className="h-6 w-6 rounded-full border-2 border-black border-t-transparent animate-spin" />
@@ -55,14 +58,14 @@ const FullscreenLoader = ({ isDarkMode }: { isDarkMode: boolean }) => (
 const AppContent: React.FC = () => {
   const initialUiState = loadUiState();
   const [filter, setFilter] = useState<string>(initialUiState.filter ?? 'ALL');
-  const [isDarkMode, setIsDarkMode] = useState(initialUiState.isDarkMode ?? false);
+  const [isDarkMode, setIsDarkMode] = useState(initialUiState.isDarkMode ?? getSystemPrefersDark());
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(initialUiState.isCartOpen ?? false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(initialUiState.isProfileOpen ?? false);
-  const [isAdminOpen, setIsAdminOpen] = useState(initialUiState.isAdminOpen ?? false);
-  const [isContactOpen, setIsContactOpen] = useState(initialUiState.isContactOpen ?? false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isContactOpen, setIsContactOpen] = useState(false);
   const hasRestoredScroll = useRef(false);
 
   const { user, products, isAuthReady } = useAuth(); // Use products from context now
@@ -91,13 +94,9 @@ const AppContent: React.FC = () => {
     const stateToPersist: PersistedUiState = {
       filter,
       isDarkMode,
-      isCartOpen,
-      isProfileOpen,
-      isAdminOpen,
-      isContactOpen,
     };
     window.sessionStorage.setItem(UI_STATE_KEY, JSON.stringify(stateToPersist));
-  }, [filter, isDarkMode, isCartOpen, isProfileOpen, isAdminOpen, isContactOpen]);
+  }, [filter, isDarkMode]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || hasRestoredScroll.current || !isAuthReady) return;
@@ -235,43 +234,55 @@ const AppContent: React.FC = () => {
       />
 
       <Suspense fallback={null}>
-        <CartDrawer
-          isOpen={isCartOpen}
-          onClose={() => setIsCartOpen(false)}
-          cartItems={cartItems}
-          onRemoveItem={handleRemoveFromCart}
-          onUpdateQuantity={handleUpdateQuantity}
-          onSetQuantity={handleSetQuantity}
-          onCheckout={handleCheckout}
-        />
+        {isCartOpen && (
+          <CartDrawer
+            isOpen={isCartOpen}
+            onClose={() => setIsCartOpen(false)}
+            cartItems={cartItems}
+            onRemoveItem={handleRemoveFromCart}
+            onUpdateQuantity={handleUpdateQuantity}
+            onSetQuantity={handleSetQuantity}
+            onCheckout={handleCheckout}
+          />
+        )}
 
-        <CheckoutModal
-          isOpen={isCheckoutOpen}
-          onClose={() => setIsCheckoutOpen(false)}
-          onClearCart={handleClearCart}
-          total={cartTotal}
-          cartItems={cartItems}
-        />
+        {isCheckoutOpen && (
+          <CheckoutModal
+            isOpen={isCheckoutOpen}
+            onClose={() => setIsCheckoutOpen(false)}
+            onClearCart={handleClearCart}
+            total={cartTotal}
+            cartItems={cartItems}
+          />
+        )}
 
-        <LoginModal
-          isOpen={isLoginOpen}
-          onClose={() => setIsLoginOpen(false)}
-        />
+        {isLoginOpen && (
+          <LoginModal
+            isOpen={isLoginOpen}
+            onClose={() => setIsLoginOpen(false)}
+          />
+        )}
 
-        <ProfileModal
-          isOpen={isProfileOpen}
-          onClose={() => setIsProfileOpen(false)}
-        />
+        {isProfileOpen && (
+          <ProfileModal
+            isOpen={isProfileOpen}
+            onClose={() => setIsProfileOpen(false)}
+          />
+        )}
 
-        <AdminDashboard
-          isOpen={isAdminOpen}
-          onClose={() => setIsAdminOpen(false)}
-        />
+        {isAdminOpen && (
+          <AdminDashboard
+            isOpen={isAdminOpen}
+            onClose={() => setIsAdminOpen(false)}
+          />
+        )}
 
-        <ContactModal
-          isOpen={isContactOpen}
-          onClose={() => setIsContactOpen(false)}
-        />
+        {isContactOpen && (
+          <ContactModal
+            isOpen={isContactOpen}
+            onClose={() => setIsContactOpen(false)}
+          />
+        )}
       </Suspense>
 
       <main>
