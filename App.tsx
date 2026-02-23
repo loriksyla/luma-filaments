@@ -234,55 +234,44 @@ const AppContent: React.FC = () => {
       />
 
       <Suspense fallback={null}>
-        {isCartOpen && (
-          <CartDrawer
-            isOpen={isCartOpen}
-            onClose={() => setIsCartOpen(false)}
-            cartItems={cartItems}
-            onRemoveItem={handleRemoveFromCart}
-            onUpdateQuantity={handleUpdateQuantity}
-            onSetQuantity={handleSetQuantity}
-            onCheckout={handleCheckout}
-          />
-        )}
+        {/* Keep overlay components mounted; their CSS transitions depend on toggling `isOpen` between rendered states. */}
+        <CartDrawer
+          isOpen={isCartOpen}
+          onClose={() => setIsCartOpen(false)}
+          cartItems={cartItems}
+          onRemoveItem={handleRemoveFromCart}
+          onUpdateQuantity={handleUpdateQuantity}
+          onSetQuantity={handleSetQuantity}
+          onCheckout={handleCheckout}
+        />
 
-        {isCheckoutOpen && (
-          <CheckoutModal
-            isOpen={isCheckoutOpen}
-            onClose={() => setIsCheckoutOpen(false)}
-            onClearCart={handleClearCart}
-            total={cartTotal}
-            cartItems={cartItems}
-          />
-        )}
+        <CheckoutModal
+          isOpen={isCheckoutOpen}
+          onClose={() => setIsCheckoutOpen(false)}
+          onClearCart={handleClearCart}
+          total={cartTotal}
+          cartItems={cartItems}
+        />
 
-        {isLoginOpen && (
-          <LoginModal
-            isOpen={isLoginOpen}
-            onClose={() => setIsLoginOpen(false)}
-          />
-        )}
+        <LoginModal
+          isOpen={isLoginOpen}
+          onClose={() => setIsLoginOpen(false)}
+        />
 
-        {isProfileOpen && (
-          <ProfileModal
-            isOpen={isProfileOpen}
-            onClose={() => setIsProfileOpen(false)}
-          />
-        )}
+        <ProfileModal
+          isOpen={isProfileOpen}
+          onClose={() => setIsProfileOpen(false)}
+        />
 
-        {isAdminOpen && (
-          <AdminDashboard
-            isOpen={isAdminOpen}
-            onClose={() => setIsAdminOpen(false)}
-          />
-        )}
+        <AdminDashboard
+          isOpen={isAdminOpen}
+          onClose={() => setIsAdminOpen(false)}
+        />
 
-        {isContactOpen && (
-          <ContactModal
-            isOpen={isContactOpen}
-            onClose={() => setIsContactOpen(false)}
-          />
-        )}
+        <ContactModal
+          isOpen={isContactOpen}
+          onClose={() => setIsContactOpen(false)}
+        />
       </Suspense>
 
       <main>
