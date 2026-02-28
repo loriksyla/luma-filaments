@@ -4,9 +4,15 @@ import { escapeHtml } from '../utils/escapeHtml';
 
 type Handler = Schema['contact']['functionHandler'];
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export const handler: Handler = async (event): Promise<any> => {
     try {
         const { name, email, subject, message } = event.arguments;
+
+        if (!email || !EMAIL_RE.test(email)) {
+            return { ok: false, message: 'Email i pavlefshëm.' };
+        }
 
         const fromEmail = process.env.CONTACT_EMAIL_FROM || 'gentrit.tech@gmail.com';
         const adminEmail = process.env.CONTACT_EMAIL_ADMIN || 'gentrit.tech@gmail.com';

@@ -8,6 +8,8 @@ import { escapeHtml } from '../utils/escapeHtml';
 
 type Handler = Schema['placeOrder']['functionHandler'];
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const parseJson = <T>(value: unknown, fallback: T): T => {
   if (typeof value === 'string') {
     try {
@@ -186,6 +188,10 @@ export const handler: Handler = async (event): Promise<any> => {
 
     const parsedItems = parseJson<OrderItem[]>(items, []);
     const parsedAddress = parseJson<AddressValue | string>(address, '');
+
+    if (!customerEmail || !EMAIL_RE.test(customerEmail)) {
+      return { ok: false, orderId: '', message: 'Email i pavlefshëm.' };
+    }
 
     if (parsedItems.length === 0) {
       return { ok: false, orderId: '', message: 'Shporta është bosh.' };
