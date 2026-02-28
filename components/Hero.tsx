@@ -30,8 +30,8 @@ const Hero: React.FC = () => {
     <section className="relative h-screen flex flex-col justify-center items-center overflow-hidden">
       {/* Abstract Background */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-teal-300/20 dark:bg-teal-500/10 rounded-full blur-[100px] animate-pulse"></div>
-        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-purple-300/20 dark:bg-purple-500/10 rounded-full blur-[120px]" style={{ animationDuration: '4s' }}></div>
+        <div className="absolute top-0 left-1/4 w-[250px] h-[250px] md:w-[500px] md:h-[500px] bg-teal-300/20 dark:bg-teal-500/10 rounded-full blur-[100px] animate-pulse"></div>
+        <div className="absolute bottom-0 right-1/4 w-[300px] h-[300px] md:w-[600px] md:h-[600px] bg-purple-300/20 dark:bg-purple-500/10 rounded-full blur-[120px]" style={{ animationDuration: '4s' }}></div>
       </div>
 
       <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
