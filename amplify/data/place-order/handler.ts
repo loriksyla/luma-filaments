@@ -4,6 +4,7 @@ import { getAmplifyDataClientConfig } from '@aws-amplify/backend-function/runtim
 import type { DataClientEnv } from '@aws-amplify/backend-function/runtime';
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import type { Schema } from '../resource';
+import { escapeHtml } from '../utils/escapeHtml';
 
 type Handler = Schema['placeOrder']['functionHandler'];
 
@@ -39,14 +40,6 @@ type AddressValue = {
   postalCode?: string;
   phone?: string;
 };
-
-const escapeHtml = (value: string) =>
-  value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
 
 const formatAddress = (address: AddressValue | string) => {
   if (typeof address === 'string') return address;

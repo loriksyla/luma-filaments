@@ -1,5 +1,6 @@
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import type { Schema } from '../resource';
+import { escapeHtml } from '../utils/escapeHtml';
 
 type Handler = Schema['contact']['functionHandler'];
 
@@ -14,11 +15,11 @@ export const handler: Handler = async (event): Promise<any> => {
 
         const htmlBody = `
       <h2>New Contact Request</h2>
-      <p><strong>Name:</strong> ${name}</p>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Subject:</strong> ${subject}</p>
+      <p><strong>Name:</strong> ${escapeHtml(name)}</p>
+      <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+      <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
       <p><strong>Message:</strong></p>
-      <p>${message.replace(/\n/g, '<br/>')}</p>
+      <p>${escapeHtml(message).replace(/\n/g, '<br/>')}</p>
     `;
 
         await ses.send(
