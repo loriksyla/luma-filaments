@@ -80,7 +80,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
         window.sessionStorage.setItem(ADMIN_TAB_KEY, activeTab);
     }, [activeTab]);
 
-    if (!user || !user.isAdmin) return null;
 
     const formatOrderId = (id: string) => {
         if (!id) return '—';
@@ -280,6 +279,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
             deleteProduct(id);
         }
     };
+
+    if (!user || !user.isAdmin) return null;
 
     return (
         <div className={`fixed inset-0 bg-slate-100/90 dark:bg-slate-950/90 backdrop-blur-md z-[100] flex overflow-hidden transition-all duration-500 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>

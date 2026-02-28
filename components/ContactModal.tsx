@@ -4,7 +4,13 @@ import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../amplify/data/resource';
 import { useAuth } from '../context/AuthContext';
 
-const client = generateClient<Schema>();
+let clientSingleton: ReturnType<typeof generateClient<Schema>> | undefined;
+const getClient = () => {
+    if (!clientSingleton) {
+        clientSingleton = generateClient<Schema>();
+    }
+    return clientSingleton;
+};
 
 interface ContactModalProps {
     isOpen: boolean;
@@ -36,7 +42,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
         setIsSubmitting(true);
 
         try {
-            const result = await client.mutations.contact({
+            const result = await getClient().mutations.contact({
                 name,
                 email,
                 subject,

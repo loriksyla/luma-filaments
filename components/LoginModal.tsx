@@ -130,6 +130,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-teal-500 transition-all text-slate-900 dark:text-white"
                                     value={fullName}
                                     onChange={(e) => setFullName(e.target.value)}
+                                    autoComplete="name"
                                     placeholder="Emër Mbiemër"
                                     required
                                 />
@@ -142,6 +143,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                                 className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-teal-500 transition-all text-slate-900 dark:text-white"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
+                                autoComplete="email"
                                 placeholder="name@example.com"
                                 required
                             />
@@ -153,6 +155,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                                 className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-teal-500 transition-all text-slate-900 dark:text-white"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
+                                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                                 placeholder="••••••••"
                                 required={!isNewPasswordRequired}
                                 disabled={isNewPasswordRequired}
@@ -171,6 +174,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-teal-500 transition-all text-slate-900 dark:text-white"
                                     value={confirmCode}
                                     onChange={(e) => setConfirmCode(e.target.value)}
+                                    autoComplete="one-time-code"
                                     placeholder="123456"
                                     required
                                 />
@@ -184,6 +188,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-teal-500 transition-all text-slate-900 dark:text-white"
                                     value={newPassword}
                                     onChange={(e) => setNewPassword(e.target.value)}
+                                    autoComplete="new-password"
                                     placeholder="Fjalëkalimi i ri"
                                     required
                                 />

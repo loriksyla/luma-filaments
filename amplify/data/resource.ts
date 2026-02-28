@@ -3,6 +3,7 @@ import { type ClientSchema, a, defineData, defineFunction } from '@aws-amplify/b
 export const placeOrderHandler = defineFunction({
   name: 'placeOrder',
   entry: './place-order/handler.ts',
+  runtime: 22,
   environment: {
     AMPLIFY_DATA_DEFAULT_NAME: 'data',
     ORDER_EMAIL_FROM: 'loriksyla1@gmail.com',
@@ -13,6 +14,7 @@ export const placeOrderHandler = defineFunction({
 export const contactHandler = defineFunction({
   name: 'contact',
   entry: './contact/handler.ts',
+  runtime: 22,
   environment: {
     CONTACT_EMAIL_FROM: 'gentrit.tech@gmail.com',
     CONTACT_EMAIL_ADMIN: 'gentrit.tech@gmail.com',

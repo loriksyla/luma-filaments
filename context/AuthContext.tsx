@@ -48,7 +48,14 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const client = generateClient<Schema>();
+type DataClient = ReturnType<typeof generateClient<Schema>>;
+let clientSingleton: DataClient | undefined;
+const getClient = (): DataClient => {
+  if (!clientSingleton) {
+    clientSingleton = generateClient<Schema>();
+  }
+  return clientSingleton;
+};
 
 const toJsonValue = <T,>(value: T): string => JSON.stringify(value ?? null);
 const fromJsonValue = <T,>(value: unknown, fallback: T): T => {
@@ -244,7 +251,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loadProducts = async (authMode?: 'identityPool' | 'userPool') => {
-    const { data } = await client.models.Product.list(
+    const { data } = await getClient().models.Product.list(
       authMode ? { authMode } : undefined
     );
     if (!data) {
@@ -312,7 +319,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!currentUser.isAdmin) {
       options.filter = { customerEmail: { eq: currentUser.email } };
     }
-    const response = await client.models.Order.list(options as any);
+    const response = await getClient().models.Order.list(options as any);
     return {
       data: mapOrders(response.data ?? []),
       nextToken: (response as { nextToken?: string | null }).nextToken ?? null,
@@ -348,7 +355,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const syncUserProfile = async (profile: User): Promise<User> => {
-    const { data } = await client.models.UserProfile.list({ authMode: 'userPool' });
+    const { data } = await getClient().models.UserProfile.list({ authMode: 'userPool' });
     if (data && data.length > 0) {
       const record = data[0];
       setUserProfileId(record.id);
@@ -359,7 +366,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
 
-    const { data: created } = await client.models.UserProfile.create({
+    const { data: created } = await getClient().models.UserProfile.create({
       name: profile.name,
       email: profile.email,
       addresses: toJsonValue(profile.addresses),
@@ -375,7 +382,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const persistAddresses = async (addresses: Address[]) => {
     if (!user) return;
     if (userProfileId) {
-      await client.models.UserProfile.update({
+      await getClient().models.UserProfile.update({
         id: userProfileId,
         name: user.name,
         email: user.email,
@@ -384,7 +391,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    const { data } = await client.models.UserProfile.create({
+    const { data } = await getClient().models.UserProfile.create({
       name: user.name,
       email: user.email,
       addresses: toJsonValue(addresses),
@@ -450,7 +457,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     subscriptions.push(
-      client.models.Order.onCreate().subscribe({
+      getClient().models.Order.onCreate().subscribe({
         next: (event: unknown) => {
           const payload = event as
             | { customerEmail?: string }
@@ -465,7 +472,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         },
       }),
-      client.models.Order.onUpdate().subscribe({
+      getClient().models.Order.onUpdate().subscribe({
         next: (event: unknown) => {
           const payload = event as
             | { customerEmail?: string }
@@ -480,7 +487,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         },
       }),
-      client.models.Order.onDelete().subscribe({
+      getClient().models.Order.onDelete().subscribe({
         next: () => {
           if (user.isAdmin) {
             scheduleOrderRefresh();
@@ -546,7 +553,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
-    await client.models.Order.update({
+    await getClient().models.Order.update({
       id: orderId,
       status: statusToBackend(status),
     } as any, { authMode: 'userPool' });
@@ -562,7 +569,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ) => {
     if (!user) return;
     try {
-      await client.models.AuditLog.create(
+      await getClient().models.AuditLog.create(
         {
           action,
           entityType,
@@ -581,7 +588,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addProduct = async (product: Product) => {
-    const { data } = await client.models.Product.create({
+    const { data } = await getClient().models.Product.create({
       name: product.name,
       type: product.type,
       color: product.color,
@@ -612,7 +619,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    await client.models.Product.update({
+    await getClient().models.Product.update({
       id: updatedProduct.id,
       name: updatedProduct.name,
       type: updatedProduct.type,
@@ -632,7 +639,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deleteProduct = async (id: string) => {
     const existing = products.find((p) => p.id === id);
-    await client.models.Product.delete({ id }, { authMode: 'userPool' });
+    await getClient().models.Product.delete({ id }, { authMode: 'userPool' });
     if (existing) {
       await createAuditLog('Fshiu Produkt', 'Product', id, existing.name, {});
     }
@@ -640,7 +647,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addOrder = async (order: Order) => {
-    const { data, errors } = await client.mutations.placeOrder({
+    const { data, errors } = await getClient().mutations.placeOrder({
       orderNumber: order.id,
       customerName: order.customerName,
       customerEmail: order.customerEmail,
@@ -691,7 +698,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       refreshLogs: async () => {
         if (!user?.isAdmin) return;
         try {
-          const { data } = await client.models.AuditLog.list({ authMode: 'userPool' });
+          const { data } = await getClient().models.AuditLog.list({ authMode: 'userPool' });
           if (data) {
             const mapped = data.map(item => ({
               id: item.id,

@@ -3,15 +3,26 @@ backend:
   phases:
     build:
       commands:
+        - nvm install 22
+        - nvm use 22
+        - node -v
+        - npm run check:node22
         - npm ci --cache .npm --prefer-offline
         - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
 frontend:
   phases:
     preBuild:
       commands:
+        - nvm install 22
+        - nvm use 22
+        - node -v
+        - npm run check:node22
         - npm ci --cache .npm --prefer-offline
     build:
       commands:
+        - nvm use 22
+        - node -v
+        - npm run check:node22
         - npm run build
   artifacts:
     baseDirectory: dist
