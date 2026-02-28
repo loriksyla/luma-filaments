@@ -58,7 +58,7 @@ const schema = a
       })
       .authorization((allow) => [
         allow.guest().to(['create']),
-        allow.owner(),
+        allow.owner().to(['read']),
         allow.groups(['ADMINS']),
       ]),
     AuditLog: a
