@@ -8,7 +8,7 @@ interface ProductCardProps {
   onAddToCart: (product: Product, quantity: number) => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
+const ProductCardComponent: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
   const [quantity, setQuantity] = useState<string | number>(1);
 
   const increment = () => setQuantity(q => {
@@ -111,5 +111,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
     </div>
   );
 };
+
+const ProductCard = React.memo(ProductCardComponent);
+ProductCard.displayName = 'ProductCard';
 
 export default ProductCard;

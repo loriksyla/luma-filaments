@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import NavBar from './components/NavBar';
 import Hero from './components/Hero';
 import ProductCard from './components/ProductCard';
@@ -141,7 +141,7 @@ const AppContent: React.FC = () => {
     };
   }, []);
 
-  const handleAddToCart = (product: Product, quantity: number) => {
+  const handleAddToCart = useCallback((product: Product, quantity: number) => {
     if (quantity <= 0 || product.stock <= 0) return;
 
     setCartItems(prev => {
@@ -160,9 +160,9 @@ const AppContent: React.FC = () => {
       return [...prev, { product, quantity: qtyToAdd }];
     });
     setIsCartOpen(true);
-  };
+  }, []);
 
-  const handleUpdateQuantity = (productId: string, delta: number) => {
+  const handleUpdateQuantity = useCallback((productId: string, delta: number) => {
     setCartItems(prev => prev.map(item => {
       if (item.product.id === productId) {
         const newQuantity = item.quantity + delta;
@@ -171,11 +171,11 @@ const AppContent: React.FC = () => {
       }
       return item;
     }));
-  };
+  }, []);
 
-  const handleSetQuantity = (productId: string, quantity: number) => {
+  const handleSetQuantity = useCallback((productId: string, quantity: number) => {
     if (quantity === 0) {
-      handleRemoveFromCart(productId);
+      setCartItems(prev => prev.filter(item => item.product.id !== productId));
       return;
     }
 
@@ -186,37 +186,86 @@ const AppContent: React.FC = () => {
       }
       return item;
     }));
-  };
+  }, []);
 
-  const handleRemoveFromCart = (productId: string) => {
+  const handleRemoveFromCart = useCallback((productId: string) => {
     setCartItems(prev => prev.filter(item => item.product.id !== productId));
-  };
+  }, []);
 
-  const handleClearCart = () => {
+  const handleClearCart = useCallback(() => {
     setCartItems([]);
-  };
+  }, []);
 
-  const handleCheckout = () => {
+  const handleCheckout = useCallback(() => {
     setIsCartOpen(false);
     setIsCheckoutOpen(true);
-  };
+  }, []);
 
-  const handleUserClick = () => {
+  const handleUserClick = useCallback(() => {
     if (user) {
       setIsProfileOpen(true);
     } else {
       setIsLoginOpen(true);
     }
-  };
+  }, [user]);
 
-  const filteredProducts = filter === 'ALL'
-    ? products
-    : products.filter(p => p.type === filter);
+  const toggleTheme = useCallback(() => {
+    setIsDarkMode(prev => !prev);
+  }, []);
+
+  const openCart = useCallback(() => {
+    setIsCartOpen(true);
+  }, []);
+
+  const closeCart = useCallback(() => {
+    setIsCartOpen(false);
+  }, []);
+
+  const closeCheckout = useCallback(() => {
+    setIsCheckoutOpen(false);
+  }, []);
+
+  const closeLogin = useCallback(() => {
+    setIsLoginOpen(false);
+  }, []);
+
+  const closeProfile = useCallback(() => {
+    setIsProfileOpen(false);
+  }, []);
+
+  const openAdmin = useCallback(() => {
+    setIsAdminOpen(true);
+  }, []);
+
+  const closeAdmin = useCallback(() => {
+    setIsAdminOpen(false);
+  }, []);
+
+  const openContact = useCallback(() => {
+    setIsContactOpen(true);
+  }, []);
+
+  const closeContact = useCallback(() => {
+    setIsContactOpen(false);
+  }, []);
+
+  const filteredProducts = useMemo(() => (
+    filter === 'ALL'
+      ? products
+      : products.filter(p => p.type === filter)
+  ), [products, filter]);
+
+  const { totalCartCount, cartTotal } = useMemo(() => (
+    cartItems.reduce(
+      (acc, item) => ({
+        totalCartCount: acc.totalCartCount + item.quantity,
+        cartTotal: acc.cartTotal + (item.product.price * item.quantity),
+      }),
+      { totalCartCount: 0, cartTotal: 0 }
+    )
+  ), [cartItems]);
+
   const shouldBlockForAuthRestore = !isAuthReady && (isAdminOpen || isProfileOpen);
-
-  // Calculate total number of items for the badge
-  const totalCartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
-  const cartTotal = cartItems.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
 
   if (shouldBlockForAuthRestore) {
     return <FullscreenLoader isDarkMode={isDarkMode} />;
@@ -226,18 +275,18 @@ const AppContent: React.FC = () => {
     <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'bg-slate-950 text-slate-200' : 'bg-slate-50 text-slate-900'}`}>
       <NavBar
         isDarkMode={isDarkMode}
-        toggleTheme={() => setIsDarkMode(!isDarkMode)}
+        toggleTheme={toggleTheme}
         cartCount={totalCartCount}
-        onCartClick={() => setIsCartOpen(true)}
+        onCartClick={openCart}
         onUserClick={handleUserClick}
-        onAdminClick={() => setIsAdminOpen(true)}
+        onAdminClick={openAdmin}
       />
 
       <Suspense fallback={null}>
         {/* Keep overlay components mounted; their CSS transitions depend on toggling `isOpen` between rendered states. */}
         <CartDrawer
           isOpen={isCartOpen}
-          onClose={() => setIsCartOpen(false)}
+          onClose={closeCart}
           cartItems={cartItems}
           onRemoveItem={handleRemoveFromCart}
           onUpdateQuantity={handleUpdateQuantity}
@@ -247,7 +296,7 @@ const AppContent: React.FC = () => {
 
         <CheckoutModal
           isOpen={isCheckoutOpen}
-          onClose={() => setIsCheckoutOpen(false)}
+          onClose={closeCheckout}
           onClearCart={handleClearCart}
           total={cartTotal}
           cartItems={cartItems}
@@ -255,22 +304,22 @@ const AppContent: React.FC = () => {
 
         <LoginModal
           isOpen={isLoginOpen}
-          onClose={() => setIsLoginOpen(false)}
+          onClose={closeLogin}
         />
 
         <ProfileModal
           isOpen={isProfileOpen}
-          onClose={() => setIsProfileOpen(false)}
+          onClose={closeProfile}
         />
 
         <AdminDashboard
           isOpen={isAdminOpen}
-          onClose={() => setIsAdminOpen(false)}
+          onClose={closeAdmin}
         />
 
         <ContactModal
           isOpen={isContactOpen}
-          onClose={() => setIsContactOpen(false)}
+          onClose={closeContact}
         />
       </Suspense>
 
@@ -333,7 +382,7 @@ const AppContent: React.FC = () => {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
             <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">LUMA</h3>
             <button
-              onClick={() => setIsContactOpen(true)}
+              onClick={openContact}
               className="px-5 py-2 rounded-full text-sm font-bold border-2 border-teal-600 text-teal-600 hover:bg-teal-600 hover:text-white dark:border-teal-400 dark:text-teal-400 dark:hover:bg-teal-400 dark:hover:text-slate-900 transition-all"
             >
               Na Kontaktoni / Kërkesa &amp; Sugjerime

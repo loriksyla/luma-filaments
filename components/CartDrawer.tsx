@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Trash2, ShoppingBag, Plus, Minus } from 'lucide-react';
 import { CartItem } from '../types';
 import StorageImage from './StorageImage';
@@ -20,7 +20,7 @@ interface CartItemRowProps {
   onSetQuantity: (id: string, qty: number) => void;
 }
 
-const CartItemRow: React.FC<CartItemRowProps> = ({
+const CartItemRowComponent: React.FC<CartItemRowProps> = ({
   item,
   onRemoveItem,
   onUpdateQuantity,
@@ -110,10 +110,16 @@ const CartItemRow: React.FC<CartItemRowProps> = ({
       </div>
     </div>
   );
-}
+};
+
+const CartItemRow = React.memo(CartItemRowComponent);
+CartItemRow.displayName = 'CartItemRow';
 
 const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, cartItems, onRemoveItem, onUpdateQuantity, onSetQuantity, onCheckout }) => {
-  const total = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+  const total = useMemo(
+    () => cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0),
+    [cartItems]
+  );
 
   return (
     <>

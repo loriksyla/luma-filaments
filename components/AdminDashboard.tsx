@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { X, Package, LayoutDashboard, ShoppingBag, Plus, Search, ChevronDown, Check, TrendingUp, Trash2, Pencil, Eye, MapPin, Upload, List } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { OrderStatus, FilamentType, Product, Address } from '../types';
@@ -87,48 +87,66 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
         const normalized = id.replace(/^ORD-/, '');
         return `#${normalized.slice(-6).toUpperCase()}`;
     };
+    const currentYear = new Date().getFullYear();
+    const normalizedSearchQuery = useMemo(() => searchQuery.toLowerCase(), [searchQuery]);
 
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const monthlyRevenue = Array.from({ length: 12 }, (_, idx) => {
-        const total = orders.reduce((sum, order) => {
-            const date = new Date(order.date);
-            if (Number.isNaN(date.getTime())) return sum;
-            if (date.getFullYear() !== currentYear || date.getMonth() !== idx) return sum;
-            return sum + order.total;
-        }, 0);
-        return Math.round(total);
-    });
+    const monthlyRevenue = useMemo(() => (
+        Array.from({ length: 12 }, (_, idx) => {
+            const total = orders.reduce((sum, order) => {
+                const date = new Date(order.date);
+                if (Number.isNaN(date.getTime())) return sum;
+                if (date.getFullYear() !== currentYear || date.getMonth() !== idx) return sum;
+                return sum + order.total;
+            }, 0);
+            return Math.round(total);
+        })
+    ), [orders, currentYear]);
+
+    const maxMonthlyRevenue = useMemo(() => Math.max(...monthlyRevenue, 1), [monthlyRevenue]);
 
     // --- Dashboard Stats ---
-    const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-    const totalOrders = orders.length;
-    const deliveredOrders = orders.filter(o => o.status === 'Dorëzuar').length;
+    const totalRevenue = useMemo(
+        () => orders.reduce((sum, order) => sum + order.total, 0),
+        [orders]
+    );
+    const totalOrders = useMemo(() => orders.length, [orders]);
+    const deliveredOrders = useMemo(
+        () => orders.filter(o => o.status === ORDER_STATUSES[3]).length,
+        [orders]
+    );
 
     // --- Filtering Logic ---
-    const filteredOrders = orders
-        .filter(order =>
-            order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            order.customerEmail.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredOrders = useMemo(() => (
+        orders
+            .filter(order =>
+                order.id.toLowerCase().includes(normalizedSearchQuery) ||
+                order.customerName.toLowerCase().includes(normalizedSearchQuery) ||
+                order.customerEmail.toLowerCase().includes(normalizedSearchQuery)
+            )
+            .sort((a, b) => {
+                const timeA = new Date(a.date).getTime();
+                const timeB = new Date(b.date).getTime();
+                if (timeA !== timeB) return timeB - timeA;
+                return b.id.localeCompare(a.id);
+            })
+    ), [orders, normalizedSearchQuery]);
+
+    const filteredProducts = useMemo(() => (
+        products.filter(product =>
+            product.name.toLowerCase().includes(normalizedSearchQuery) ||
+            product.type.toLowerCase().includes(normalizedSearchQuery) ||
+            (product.brand || '').toLowerCase().includes(normalizedSearchQuery)
         )
-        .sort((a, b) => {
-            const timeA = new Date(a.date).getTime();
-            const timeB = new Date(b.date).getTime();
-            if (timeA !== timeB) return timeB - timeA;
-            return b.id.localeCompare(a.id);
-        });
-    const filteredProducts = products.filter(product =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (product.brand || '').toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    const filteredLogs = logs.filter(log =>
-        log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        log.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        log.userEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ((log.entityName || '').toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+    ), [products, normalizedSearchQuery]);
+
+    const filteredLogs = useMemo(() => (
+        logs.filter(log =>
+            log.action.toLowerCase().includes(normalizedSearchQuery) ||
+            log.userName.toLowerCase().includes(normalizedSearchQuery) ||
+            log.userEmail.toLowerCase().includes(normalizedSearchQuery) ||
+            ((log.entityName || '').toLowerCase().includes(normalizedSearchQuery))
+        )
+    ), [logs, normalizedSearchQuery]);
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -361,8 +379,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Të Ardhurat Mujore</h3>
                             <div className="h-64 flex items-end justify-between gap-2 md:gap-4 px-2">
                                 {monthlyRevenue.map((value, i) => {
-                                    const max = Math.max(...monthlyRevenue, 1);
-                                    const h = Math.round((value / max) * 100);
+                                    const h = Math.round((value / maxMonthlyRevenue) * 100);
                                     return (
                                         <div key={i} className="w-full bg-rose-100 dark:bg-rose-900/20 rounded-t-lg relative group">
                                             <div
@@ -776,3 +793,4 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
         </div>
     );
 };
+
