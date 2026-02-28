@@ -648,10 +648,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addOrder = async (order: Order) => {
     const { data, errors } = await getClient().mutations.placeOrder({
-      orderNumber: order.id,
       customerName: order.customerName,
       customerEmail: order.customerEmail,
-      date: order.date,
       items: toJsonValue(order.items),
       address: toJsonValue(order.address),
     }, { authMode: user ? 'userPool' : 'identityPool' });

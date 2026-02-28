@@ -59,9 +59,8 @@ const schema = a
         address: a.json(),
       })
       .authorization((allow) => [
-        allow.guest().to(['create']),
         allow.owner().to(['read']),
-        allow.groups(['ADMINS']),
+        allow.groups(['ADMINS']).to(['read', 'update', 'delete']),
       ]),
     AuditLog: a
       .model({
@@ -85,10 +84,8 @@ const schema = a
     placeOrder: a
       .mutation()
       .arguments({
-        orderNumber: a.string().required(),
         customerName: a.string().required(),
         customerEmail: a.string().required(),
-        date: a.string().required(),
         items: a.string().required(),
         address: a.string().required(),
       })

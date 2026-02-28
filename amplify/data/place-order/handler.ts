@@ -3,6 +3,7 @@ import { generateClient } from 'aws-amplify/data';
 import { getAmplifyDataClientConfig } from '@aws-amplify/backend-function/runtime';
 import type { DataClientEnv } from '@aws-amplify/backend-function/runtime';
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { randomUUID } from 'node:crypto';
 import type { Schema } from '../resource';
 import { escapeHtml } from '../utils/escapeHtml';
 
@@ -175,15 +176,15 @@ export const handler: Handler = async (event): Promise<any> => {
     const client = generateClient<Schema>();
 
     const {
-      orderNumber,
       customerName,
       customerEmail,
-      date,
       items,
       address,
     } = event.arguments;
 
     const status = 'KRIJUAR';
+    const orderNumber = `ORD-${randomUUID().slice(0, 8).toUpperCase()}`;
+    const date = new Date().toISOString();
     let calculatedTotal = 0;
 
     const parsedItems = parseJson<OrderItem[]>(items, []);
