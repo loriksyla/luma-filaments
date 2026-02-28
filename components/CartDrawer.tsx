@@ -1,22 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Trash2, ShoppingBag, Plus, Minus } from 'lucide-react';
 import { CartItem } from '../types';
-import { getUrl } from 'aws-amplify/storage';
-
-const StorageImage = ({ path, className }: { path: string, className?: string }) => {
-  const [url, setUrl] = useState<string>('');
-  useEffect(() => {
-    if (!path) return;
-    if (path.startsWith('http') || path.startsWith('blob:') || path.startsWith('data:')) {
-      setUrl(path);
-      return;
-    }
-    getUrl({ path }).then(res => setUrl(res.url.toString())).catch(console.error);
-  }, [path]);
-
-  if (!url) return <div className={`flex items-center justify-center bg-slate-100 dark:bg-slate-800 ${className || 'w-full h-full'}`}><ShoppingBag size={24} className="text-slate-400" /></div>;
-  return <img src={url} className={`object-cover ${className || 'w-full h-full'}`} loading="lazy" decoding="async" />;
-};
+import StorageImage from './StorageImage';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -79,7 +64,7 @@ const CartItemRow: React.FC<CartItemRowProps> = ({
   return (
     <div className="flex gap-4 items-start bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl animate-fade-in border border-slate-100 dark:border-slate-800/50">
       <div className="w-20 h-20 rounded-lg flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 overflow-hidden">
-        <StorageImage path={item.product.imageUrl} className="w-full h-full object-cover" />
+        <StorageImage path={item.product.imageUrl} className="w-full h-full object-cover" fallbackIcon={<ShoppingBag size={24} className="text-slate-400" />} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-start">

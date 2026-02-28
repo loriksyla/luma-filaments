@@ -2,7 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { X, Package, LayoutDashboard, ShoppingBag, Plus, Search, ChevronDown, Check, TrendingUp, Trash2, Pencil, Eye, MapPin, Upload, List } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { OrderStatus, FilamentType, Product, Address } from '../types';
-import { uploadData, getUrl } from 'aws-amplify/storage';
+import { uploadData } from 'aws-amplify/storage';
+import StorageImage, { getCachedUrl } from './StorageImage';
 
 interface AdminDashboardProps {
     isOpen: boolean;
@@ -11,21 +12,6 @@ interface AdminDashboardProps {
 
 const ORDER_STATUSES: OrderStatus[] = ['Krijuar', 'Në proces', 'Në dërgim', 'Dorëzuar', 'Anuluar'];
 const ADMIN_TAB_KEY = 'luma-admin-tab-v1';
-
-const StorageImage = ({ path, className }: { path: string, className?: string }) => {
-    const [url, setUrl] = useState<string>('');
-    useEffect(() => {
-        if (!path) return;
-        if (path.startsWith('http') || path.startsWith('blob:') || path.startsWith('data:')) {
-            setUrl(path);
-            return;
-        }
-        getUrl({ path }).then(res => setUrl(res.url.toString())).catch(console.error);
-    }, [path]);
-
-    if (!url) return <div className={`flex items-center justify-center bg-slate-100 dark:bg-slate-800 ${className || 'w-16 h-16 rounded-lg shrink-0'}`}><Package size={24} className="text-slate-400" /></div>;
-    return <img src={url} className={`object-cover ${className || 'w-16 h-16 rounded-lg shrink-0'}`} />;
-};
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose }) => {
     const {
@@ -263,8 +249,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
 
         if (product.imageUrl) {
             try {
-                const url = await getUrl({ path: product.imageUrl });
-                setPreviewUrl(url.url.toString());
+                const url = await getCachedUrl(product.imageUrl);
+                setPreviewUrl(url);
             } catch (e) {
                 console.error("Could not load preview", e);
             }
@@ -571,7 +557,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen, onClose 
                                     ) : (
                                         filteredProducts.map(product => (
                                             <div key={product.id} className="relative group flex gap-4 p-4 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-800/20 hover:border-rose-200 dark:hover:border-rose-900/50 transition-all">
-                                                <StorageImage path={product.imageUrl} />
+                                                <StorageImage path={product.imageUrl} className="w-16 h-16 rounded-lg shrink-0" />
                                                 <div className="flex-1 min-w-0">
                                                     <h4 className="font-bold text-slate-900 dark:text-white truncate">{product.name}</h4>
                                                     <p className="text-xs text-slate-500 mb-2 truncate">{product.type}</p>

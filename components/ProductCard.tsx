@@ -1,22 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Product } from '../types';
 import { ShoppingBag, Plus, Minus, Package } from 'lucide-react';
-import { getUrl } from 'aws-amplify/storage';
-
-const StorageImage = ({ path, className }: { path: string, className?: string }) => {
-  const [url, setUrl] = useState<string>('');
-  useEffect(() => {
-    if (!path) return;
-    if (path.startsWith('http') || path.startsWith('blob:') || path.startsWith('data:')) {
-      setUrl(path);
-      return;
-    }
-    getUrl({ path }).then(res => setUrl(res.url.toString())).catch(console.error);
-  }, [path]);
-
-  if (!url) return <div className={`flex items-center justify-center bg-slate-100 dark:bg-slate-800 ${className || 'w-full h-full'}`}><Package size={48} className="text-slate-400" /></div>;
-  return <img src={url} className={`object-cover ${className || 'w-full h-full'}`} loading="lazy" decoding="async" />;
-};
+import StorageImage from './StorageImage';
 
 interface ProductCardProps {
   product: Product;
@@ -65,7 +50,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
   return (
     <div className="group relative bg-white dark:bg-slate-800/50 rounded-xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-500 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm flex flex-col">
       <div className="aspect-square relative flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 overflow-hidden">
-        <StorageImage path={product.imageUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+        <StorageImage path={product.imageUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" fallbackIcon={<Package size={48} className="text-slate-400" />} />
 
         {/* Floating Tag */}
         <div className="absolute top-4 left-4 bg-slate-600 text-white z-10 text-sm font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-md">
