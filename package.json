@@ -19,11 +19,13 @@
   "devDependencies": {
     "@aws-amplify/backend": "^1.20.0",
     "@aws-amplify/backend-cli": "^1.8.2",
+    "@tailwindcss/vite": "^4.2.1",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "aws-cdk-lib": "^2.234.1",
     "constructs": "^10.4.5",
     "esbuild": "^0.27.2",
+    "tailwindcss": "^4.2.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite": "^6.2.0"
