@@ -130,7 +130,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                         <User size={20} />
                         Llogaria Ime
                     </h2>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500">
+                    <button onClick={onClose} className="p-3 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500">
                         <X size={20} />
                     </button>
                 </div>
@@ -194,7 +194,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                                 <div className="flex items-center gap-2">
                                                     <button
                                                         onClick={() => handleStartEdit(addr)}
-                                                        className="p-2 text-slate-400 hover:text-blue-500 transition-colors"
+                                                        className="p-3 text-slate-400 hover:text-blue-500 transition-colors"
                                                         title="Ndrysho"
                                                     >
                                                         <Pencil size={18} />
@@ -203,14 +203,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                                                         <>
                                                             <button
                                                                 onClick={() => setDefaultAddress(addr.id)}
-                                                                className="p-2 text-slate-400 hover:text-teal-500 transition-colors"
+                                                                className="p-3 text-slate-400 hover:text-teal-500 transition-colors"
                                                                 title="Bëje Default"
                                                             >
                                                                 <Star size={18} />
                                                             </button>
                                                             <button
                                                                 onClick={() => deleteAddress(addr.id)}
-                                                                className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                                                                className="p-3 text-slate-400 hover:text-red-500 transition-colors"
                                                                 title="Fshij"
                                                             >
                                                                 <Trash2 size={18} />

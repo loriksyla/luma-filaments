@@ -71,7 +71,7 @@ const CartItemRow: React.FC<CartItemRowProps> = ({
           <h4 className="font-bold text-slate-900 dark:text-white text-base truncate pr-2">{item.product.name}</h4>
           <button
             onClick={() => onRemoveItem(item.product.id)}
-            className="text-slate-400 hover:text-red-500 transition-colors p-1"
+            className="text-slate-400 hover:text-red-500 transition-colors p-3"
             title="Hiq artikullin"
           >
             <Trash2 size={16} />
@@ -132,7 +132,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, cartItems, onR
               <ShoppingBag size={20} />
               SHPORTA JUAJ ({cartItems.length})
             </h2>
-            <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500">
+            <button onClick={onClose} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500">
               <X size={20} />
             </button>
           </div>
